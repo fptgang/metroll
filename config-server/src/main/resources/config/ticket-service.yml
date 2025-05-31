@@ -1,0 +1,29 @@
+spring:
+  application:
+    name: ticket-service
+
+  docker:
+    compose:
+      enabled: false
+
+  jackson:
+    default-property-inclusion: non_null
+
+server:
+  forward-headers-strategy: framework
+
+metroll:
+  exception:
+    log: true
+
+springdoc:
+  cache:
+    disabled: true
+  version: '@springdoc.version@'
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://service-registry.metroll:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true

@@ -1,0 +1,11 @@
+rootProject.name = 'metroll'
+
+include 'shared'
+include 'config-server'
+include 'service-registry'
+include 'api-gateway'
+include 'account-service'
+include 'ticket-service'
+include 'subway-service'
+include 'order-service'
+

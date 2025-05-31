@@ -1,0 +1,33 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+We are Metro - a metro ticketing system written in Java Spring Boot Cloud
+
+The project has following core components
+- The Config Server: using Spring Cloud Config Server as the centralized store of configuration of all services within the project
+- The Service Registry: using Spring Cloud Netflix Eureka as the centralized service registry
+- The API Gateway: put in front of services, responsible for routing and authorization
+
+And there are other business feature services.
+
+Ensure the code goes into the right module:
+- account-service
+- station-service
+- ticket-service
+- train-service
+- discount-service
+- order-service
+- api-gateway
+- service-registry
+- config-server
+
+The "shared" module is used for business feature services (all modules suffixing -service except the 3 core components) contains shared DTOs, Domain, Utilities, etc
+
+All services including the Service Registry and API Gateway has their configuration files served by the Config Server
+
+The expected running environment is containerization with three core components having fixed domain name and ports (Config Server, Service Registry, API Gateway) while the rest having randomly-assigned domain name and port by Docker environment. Only the port 8080 binded by the API Gateway is exposed to the host
+
+For example, a request from the host: `http://localhost:8080/account/{path}` will be routed to account-service at `http:/{account-service-address-provided-by-Eureka}/{path}`
+

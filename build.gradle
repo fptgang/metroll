@@ -1,0 +1,110 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.4.0' apply false
+    id 'io.spring.dependency-management' version '1.1.6' apply false
+}
+
+allprojects {
+    group = 'com.fpt.metroll'
+    version = '1.0-SNAPSHOT'
+
+    repositories {
+        mavenCentral()
+    }
+}
+
+// All modules
+subprojects {
+    apply plugin: 'java'
+    apply plugin: 'org.springframework.boot'
+    apply plugin: 'io.spring.dependency-management'
+
+    java {
+        sourceCompatibility = JavaVersion.VERSION_21
+    }
+
+    dependencies {
+        compileOnly 'org.projectlombok:lombok'
+        annotationProcessor 'org.projectlombok:lombok'
+        implementation 'org.mapstruct:mapstruct:1.6.3'
+        annotationProcessor 'org.mapstruct:mapstruct-processor:1.6.3'
+        implementation 'org.jetbrains:annotations:26.0.2'
+    }
+}
+
+// Define module sets
+def springApps = subprojects.findAll { it.name != 'shared' }
+def businessFeatures = [
+        project(':account-service'),
+        project(':ticket-service'),
+        project(':subway-service'),
+        project(':order-service')
+]
+def eurekaClients = [project(':api-gateway')] + businessFeatures
+def configClients = springApps - [project(':config-server')]
+
+// Apply dependencies to spring-app modules (all except shared)
+springApps.each { p ->
+    p.dependencyManagement {
+        imports {
+            mavenBom "org.springframework.cloud:spring-cloud-dependencies:2024.0.1"
+        }
+    }
+
+    p.dependencies {
+        implementation 'org.springframework.boot:spring-boot-starter-actuator:3.5.0'
+        implementation 'org.springframework.boot:spring-boot-devtools'
+        implementation 'me.paulschwarz:spring-dotenv:3.0.0'
+    }
+}
+
+// Apply Config clients
+configClients.each { p ->
+    p.dependencies {
+        implementation 'org.springframework.cloud:spring-cloud-starter-config'
+    }
+}
+
+// Apply Eureka clients
+eurekaClients.each { p ->
+    p.dependencies {
+        implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client:4.2.1'
+    }
+}
+
+// Apply business services
+businessFeatures.each { p ->
+    p.dependencies {
+        implementation project(':shared')
+        implementation 'org.springframework.cloud:spring-cloud-starter-openfeign:4.2.1'
+        implementation 'org.springframework.boot:spring-boot-starter-web'
+        implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.8'
+
+        implementation 'com.fasterxml.jackson.core:jackson-databind'
+        implementation 'jakarta.validation:jakarta.validation-api'
+        implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
+
+        implementation 'org.mongodb:mongodb-driver-sync:4.11.1'
+        implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
+
+//        testImplementation 'org.springframework.boot:spring-boot-starter-test'
+//        testImplementation 'org.springframework.boot:spring-boot-testcontainers'
+//        testImplementation 'org.springframework.security:spring-security-test'
+//        testImplementation 'org.testcontainers:junit-jupiter'
+//        testImplementation 'org.testcontainers:mongodb'
+//        testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    }
+}
+
+// Dependencies for shared module
+project(':shared') {
+    dependencies {
+        implementation 'org.springframework.cloud:spring-cloud-starter-openfeign:4.2.1'
+        implementation 'org.springframework.boot:spring-boot-starter-security'
+        implementation 'org.springframework.boot:spring-boot-starter-web'
+        implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.8'
+
+        implementation 'org.mongodb:mongodb-driver-sync:4.11.1'
+        implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
+    }
+}

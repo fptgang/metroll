@@ -1,0 +1,6 @@
+logging:
+  level:
+    root: DEBUG
+metroll:
+  auth:
+    fake-firebase-profiles: true

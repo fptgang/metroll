@@ -1,0 +1,30 @@
+server:
+  port: 8761
+  forward-headers-strategy: framework
+
+spring:
+  application:
+    name: service-registry
+
+  docker:
+    compose:
+      enabled: false
+
+  jackson:
+    default-property-inclusion: non_null
+
+  freemarker:
+    template-loader-path: classpath:/templates/
+    prefer-file-system-access: false
+
+metroll:
+  exception:
+    log: true
+
+eureka:
+  client:
+    register-with-eureka: false
+    fetch-registry: false
+  server:
+    wait-time-in-ms-when-sync-empty: 0
+    enable-self-preservation: false

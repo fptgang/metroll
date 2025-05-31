@@ -1,0 +1,93 @@
+server:
+  port: 8080
+  forward-headers-strategy: framework
+
+spring:
+  application:
+    name: api-gateway
+  docker:
+    compose:
+      enabled: false
+  jackson:
+    default-property-inclusion: non_null
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+      routes:
+        - id: account-service
+          uri: lb://account-service
+          predicates:
+            - Path=/account/**
+            #- Header=X-Api-Version, 1
+          filters:
+            - RewritePath=/account/(?<path>.*), /$\{path}
+        - id: train-service
+          uri: lb://train-service
+          predicates:
+            - Path=/train/**
+          filters:
+            - RewritePath=/train/(?<path>.*), /$\{path}
+        - id: ticket-service
+          uri: lb://ticket-service
+          predicates:
+            - Path=/ticket/**
+          filters:
+            - RewritePath=/ticket/(?<path>.*), /$\{path}
+        - id: order-service
+          uri: lb://order-service
+          predicates:
+            - Path=/order/**
+          filters:
+            - RewritePath=/order/(?<path>.*), /$\{path}
+        - id: station-service
+          uri: lb://station-service
+          predicates:
+            - Path=/station/**
+          filters:
+            - RewritePath=/station/(?<path>.*), /$\{path}
+        - id: discount-service
+          uri: lb://discount-service
+          predicates:
+            - Path=/discount/**
+          filters:
+            - RewritePath=/discount/(?<path>.*), /$\{path}
+        - id: openapi-proxy
+          uri: http://api-gateway.metroll:${server.port}
+          predicates:
+            - Path=/v3/api-docs/**
+          filters:
+            - RewritePath=/v3/api-docs/(?<path>.*), /$\{path}/v3/api-docs
+        - id: openapi-local
+          uri: http://localhost:${server.port}
+          predicates:
+            - Path=/v3/api-docs/**
+          filters:
+            - RewritePath=/v3/api-docs/(?<path>.*), /$\{path}/v3/api-docs
+
+metroll:
+  exception:
+    log: true
+
+  auth:
+    fake-firebase-profiles: true
+
+springdoc:
+  cache:
+    disabled: true
+  version: '@springdoc.version@'
+  swagger-ui:
+    use-root-path: true
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://service-registry.metroll:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true

@@ -1,0 +1,24 @@
+# Stage 1: Build the application
+#FROM eclipse-temurin:21-jdk-jammy
+
+# Set working directory
+#WORKDIR /app
+
+# Copy the entire project
+#COPY ./ .
+
+# Build only the desired module's bootJar
+#RUN ./gradlew --no-daemon :subway-service:bootJar
+
+# Stage 2: Run the application
+FROM eclipse-temurin:21-jdk-jammy
+
+#WORKDIR /app
+WORKDIR .
+
+# Copy the built jar from the previous stage
+#COPY --from=builder /app/subway-service/build/libs/*.jar app.jar
+COPY /subway-service/build/libs/*.jar app.jar
+
+# Run the Spring Boot app
+ENTRYPOINT ["java", "-Xmx1G", "-jar", "app.jar"]
