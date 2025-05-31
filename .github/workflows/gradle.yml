@@ -1,0 +1,74 @@
+name: Java CI with Gradle
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@af1da67850ed9a4cedd57bfd976089dd991e2582  # v4.0.0
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v35
+      - name: Determine build target
+        run: |
+          # Find all modules: directories containing build.gradle
+          modules=()
+          for dir in */; do
+            if [ -f "${dir}build.gradle" ]; then
+              modules+=("${dir%/}")
+            fi
+          done
+
+          changed_files="${{ steps.changed-files.outputs.all_changed_files }}"
+
+          # Define global files
+          global_files=("build.gradle" "settings.gradle")
+
+          # Check for global changes
+          global_change=false
+          for file in $changed_files; do
+            if [[ " ${global_files[*]} " =~ " $file " ]] || [[ $file == gradle/* ]]; then
+              global_change=true
+              break
+            fi
+          done
+
+          # Find changed modules
+          changed_modules=()
+          for file in $changed_files; do
+            for module in "${modules[@]}"; do
+              if [[ $file == $module/* ]]; then
+                changed_modules+=("$module")
+                break
+              fi
+            done
+          done
+
+          # Remove duplicates
+          changed_modules=($(echo "${changed_modules[@]}" | tr ' ' '\n' | sort -u | tr '\n' ' '))
+
+          # Determine target
+          if $global_change || [ ${#changed_modules[@]} -gt 1 ]; then
+            echo "target=build" >> $GITHUB_ENV
+          elif [ ${#changed_modules[@]} -eq 1 ]; then
+            echo "target=:${changed_modules[0]}:build" >> $GITHUB_ENV
+          else
+            echo "target=skip" >> $GITHUB_ENV
+          fi
+      - name: Build with Gradle Wrapper
+        if: env.target != 'skip'
+        run: ./gradlew ${{ env.target }}
