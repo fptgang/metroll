@@ -59,12 +59,21 @@ spring:
           filters:
             - RewritePath=/v3/api-docs/(?<path>.*), /$\{path}/v3/api-docs
 
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowedOrigins: "*"
+            allowedMethods: "*"
+            allowedHeaders: "*"
+
 metroll:
   exception:
     log: true
 
   auth:
-    fake-firebase-profiles: true
+    fake-firebase-profiles: false
 
 springdoc:
   cache:

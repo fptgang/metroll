@@ -73,6 +73,23 @@ Service receives:
 ### 4. Mock JWT
 - Gửi API-gateway dùng JWT theo format: `$mock:<user id>`
 - VD mock user ID là `123` thì ghi `$mock:123`
+- Cần login 1 lần trước để tạo tài khoản
+```
+curl -X 'POST' \
+  'http://api-gateway.metroll:8080/account/login/' \
+  -H 'accept: */*' \
+  -H 'Authorization: Bearer $mock:test1' \
+  -d ''
+
+{
+  "id": "test1",
+  "email": "mock-test1@example.com",
+  "fullName": "mock-test1@example.com",
+  "phoneNumber": "",
+  "role": "CUSTOMER",
+  "active": true
+}
+```
 
 ---
 

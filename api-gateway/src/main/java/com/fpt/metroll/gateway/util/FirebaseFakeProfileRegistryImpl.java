@@ -24,7 +24,7 @@ public final class FirebaseFakeProfileRegistryImpl implements FirebaseFakeProfil
                     "email", "mock-"+accountId+"@example.com",
                     "email_verified", true,
                     "iss", "https://securetoken.google.com/project-id",
-                    "role", "USER"
+                    "role", "CUSTOMER"
             );
 
             var cons = FirebaseToken.class.getDeclaredConstructor(Map.class);

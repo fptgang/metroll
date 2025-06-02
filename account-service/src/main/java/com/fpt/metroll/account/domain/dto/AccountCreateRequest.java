@@ -1,20 +1,15 @@
-package com.fpt.metroll.shared.domain.dto.account;
+package com.fpt.metroll.account.domain.dto;
 
 import com.fpt.metroll.shared.domain.enums.AccountRole;
 import lombok.Builder;
 import lombok.Data;
 
-import java.time.Instant;
-
-@Builder
 @Data
-public class AccountDto {
+@Builder
+public class AccountCreateRequest {
     private String id;
     private String email;
     private String fullName;
     private String phoneNumber;
     private AccountRole role;
-    private Boolean active;
-    private Instant createdAt;
-    private Instant updatedAt;
 }
