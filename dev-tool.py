@@ -1,15 +1,27 @@
 import os
 import sys
+import stat
 
 # Define all services
 services = ["config-server", "service-registry", "api-gateway", "account-service", "order-service", "ticket-service", "subway-service"]
+
+# check os platform
+if sys.platform.startswith("win"):
+    gradle_cmd = "gradlew"
+else:
+    gradle_cmd = "./gradlew"
+
+    gradlew_path = "./gradlew"
+    if not os.access(gradlew_path, os.X_OK):
+        print("Making gradlew executable...")
+        os.chmod(gradlew_path, os.stat(gradlew_path).st_mode | stat.S_IXUSR)
 
 def run(cmd):
     print(f"> {cmd}")
     os.system(cmd)
 
 def build_all():
-    run("gradlew clean bootJar")
+    run(f"{gradle_cmd} clean bootJar")
 
 def deploy_all():
     run("docker-compose down")
@@ -21,7 +33,7 @@ def build_and_deploy_all():
     deploy_all()
 
 def build_service(service):
-    run(f"gradlew clean :{service}:bootJar --offline")
+    run(f"{gradle_cmd} clean :{service}:bootJar --offline")
 
 def deploy_service(service):
     run(f"docker-compose stop {service}")
