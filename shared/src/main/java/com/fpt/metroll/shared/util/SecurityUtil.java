@@ -9,6 +9,8 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import java.util.function.Supplier;
+
 @Slf4j
 public class SecurityUtil {
 
@@ -35,8 +37,27 @@ public class SecurityUtil {
         if (authentication instanceof UsernamePasswordAuthenticationToken auth) {
             if (auth.getPrincipal() instanceof String userId) {
                 return userId;
-            } else {
-                throw new InsufficientAuthenticationException("Unable to obtain AppUser");
+            }
+        }
+
+        return null;
+    }
+
+    public static String requireUserEmail() {
+        String email = getUserEmail();
+        if (email == null) {
+            throw new InsufficientAuthenticationException("User is not authenticated");
+        }
+        return email;
+    }
+
+    @Nullable
+    public static String getUserEmail() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication instanceof UsernamePasswordAuthenticationToken auth) {
+            if (auth.getCredentials() instanceof String email) {
+                return email;
             }
         }
 
@@ -65,8 +86,14 @@ public class SecurityUtil {
         return role;
     }
 
+    private static final ThreadLocal<AccountRole> localRole = ThreadLocal.withInitial(() -> null);
+
     @Nullable
     public static AccountRole getUserRole() {
+        if (localRole.get() != null) {
+            return localRole.get();
+        }
+
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         if (authentication instanceof UsernamePasswordAuthenticationToken auth) {
@@ -78,5 +105,23 @@ public class SecurityUtil {
         }
 
         return null;
+    }
+
+    public static void elevate(AccountRole role, Runnable action) {
+        localRole.set(role);
+        try {
+            action.run();
+        } finally {
+            localRole.remove();
+        }
+    }
+
+    public static <T> T elevate(AccountRole role, Supplier<T> action) {
+        localRole.set(role);
+        try {
+            return action.get();
+        } finally {
+            localRole.remove();
+        }
     }
 }

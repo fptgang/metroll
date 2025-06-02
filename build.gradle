@@ -84,7 +84,7 @@ businessFeatures.each { p ->
         implementation 'jakarta.validation:jakarta.validation-api'
         implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
 
-        implementation 'org.mongodb:mongodb-driver-sync:4.11.1'
+        implementation 'com.google.guava:guava:33.4.8-jre'
         implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
 
 //        testImplementation 'org.springframework.boot:spring-boot-starter-test'

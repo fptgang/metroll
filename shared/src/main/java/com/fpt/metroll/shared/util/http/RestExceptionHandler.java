@@ -1,5 +1,6 @@
 package com.fpt.metroll.shared.util.http;
 
+import com.fpt.metroll.shared.exception.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
@@ -38,6 +39,8 @@ public class RestExceptionHandler extends ResponseEntityExceptionHandler {
         } else if (ex instanceof IllegalArgumentException ||
                 ex instanceof IllegalStateException) {
             status = HttpStatus.BAD_REQUEST;
+        } else if (ex instanceof NoPermissionException) {
+            status = HttpStatus.FORBIDDEN;
         }
 
         log.info("Error status {} due to exception {}", status, ex.getClass().getName());

@@ -27,10 +27,13 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
         List<String> authHeaders = exchange.getRequest().getHeaders().get("Authorization");
+
         if (authHeaders != null && !authHeaders.isEmpty()) {
             String authHeader = authHeaders.getFirst();
+
             if (authHeader.startsWith("Bearer ")) {
                 String token = authHeader.substring(7);
+
                 try {
                     FirebaseToken firebaseToken = firebaseFakeProfileRegistry.verifyIdToken(token);
 
@@ -39,11 +42,15 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
                     }
 
                     String uid = firebaseToken.getUid();
+                    String email = firebaseToken.getEmail();
                     String role = (String) firebaseToken.getClaims().get("role");
+
                     ServerHttpRequest modifiedRequest = exchange.getRequest().mutate()
                             .header("X-User-Id", uid)
                             .header("X-User-Role", role)
+                            .header("X-User-Email", email)
                             .build();
+
                     return chain.filter(exchange.mutate().request(modifiedRequest).build());
                 } catch (FirebaseAuthException e) {
                     exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);

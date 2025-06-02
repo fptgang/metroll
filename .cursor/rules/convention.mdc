@@ -1,0 +1,78 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+1. If the code is going to be shared across services (e.g. Spring OpenFeign Clients, DTOs, Enums, Mappers, Exception)
+> Put them in com.fpt.metroll.shared
+
+2. If the code is going to be service-specific, and only be exposed to the API-gateway
+> Prefer putting them locally in the right service module, e.g. com.fpt.metroll.<service module>
+
+3. Check for Security using com.fpt.metroll.shared.util.SecurityUtil
+> requireUserId(): check auth first, return current id (not-null)
+> getUserId(): return current id (or null if not auth); no exception raised
+> requireUserRole(): check auth first, return current role (not-null)
+> getUserRole(): return current role (or null if not auth); no exception raised
+> requireUserEmail(): check auth first, return current email (not-null)
+> getUserEmail(): return current email (or null if not auth); no exception raised
+- Use com.fpt.metroll.shared.exception.NoPermissionException to throw no-permission error in services
+
+4. Use MongoHelper for Pagination with Spring Data MongoDB
+```java
+var res = mongoHelper.find(query -> {
+    if (search != null && !search.isBlank()) {
+        Criteria criteria = new Criteria().orOperator(
+                Criteria.where("fullName").regex(search, "i"),
+                Criteria.where("email").regex(search, "i"),
+                Criteria.where("phoneNumber").regex(search, "i"));
+        query.addCriteria(criteria);
+    }
+
+    // Staff can only see Customer
+    if (SecurityUtil.hasRole(AccountRole.STAFF)) {
+        query.addCriteria(Criteria.where("role")
+                .is(AccountRole.CUSTOMER.name()));
+    }
+
+    return query;
+}, pageable, Account.class).map(accountMapper::toDto);
+return PageMapper.INSTANCE.toPageDTO(res);
+```
+
+5. Use MapStruct for Mapping between DTO and Document
+> Use @Mapper(componentModel = "spring")
+> Explicitly uses the Mapper if the DTO/Document relies on other mappers
+> If needed, use Decorator pattern to further customizing the mapping on top of the default
+> Put Mappers in the right shared module or service-specific module
+
+6. DTO
+- Use Suffix "Request" for the request DTO (incoming) such as AccountCreateRequest, AccountUpdateRequest
+- Use Suffix "Dto" for the response/generic DTO (outgoing) such as AccountDto, AccountSummaryDto
+- Construct distinct DTOs for different needs: AccountDto, AccountSummaryDto, AccountCreateRequest, AccountUpdateRequest
+
+7. Document
+- Do NOT use ``@DbRef` to refer entities in different service/module unless there exists secondary-duplicated document within the same service
+- Each service holds a different database (database-per-service design)
+- Create/Update date:
+```java
+    @CreatedDate
+    private Instant createdAt;
+
+    @LastModifiedDate
+    private Instant updatedAt;
+```
+- Use Instant for date-time
+- Prefer introducing Enums where appropriate instead of string
+- Leverage MongoDB Bson on embedding & nested structure, introduce them as distinct, small-sized data classes instead of document class
+
+8. Service
+- Use Guava Preconditions to quickly check simple validation such as input validation
+- Do not check Security with Preconditions, write manually and raise NoPermissionException
+- Use @Transactional if there are modifications to more than one repository
+
+9. Cross-Service communication
+- Use Spring Cloud OpenFeign, put these services in the shared module: com.fpt.metroll.shared.domain.client
+- Ensure the method definition matches the right controller in feature-specific service
+- Ensure the DTOs, Enums and Mappers relevant to the method definition is also put in the shared module: com.fpt.metroll.shared.domain.dto, com.fpt.metroll.shared.domain.enums, com.fpt.metroll.shared.domain.mapper to ensure syntax check across modules
+- FeignClientInterceptor already exists to handle cross-service authorization, you do not have to care this
