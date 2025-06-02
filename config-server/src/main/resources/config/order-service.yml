@@ -9,6 +9,11 @@ spring:
   jackson:
     default-property-inclusion: non_null
 
+  data:
+    mongodb:
+      uri: ${DATABASE_ORDER_SERVICE}
+      ssl: {enabled: true}
+
 server:
   forward-headers-strategy: framework
 

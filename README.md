@@ -28,11 +28,15 @@
   + Rerun (chạy lại container)
 - Lựa chọn container hoặc ALL
 
-### 4. Profiles (optional)
+### 4. Profiles
 Tạo file `.env` tại thư mục root của project. Sau khi sửa xong, chạy lại container
 
 ```properties
 SPRING_PROFILES_ACTIVE=dev
+DATABASE_ACCOUNT_SERVICE=mongodb+srv://user:pass@domain/account?retryWrites=true&w=majority&appName=Cluster0
+DATABASE_ORDER_SERVICE=mongodb+srv://user:pass@domain/order?retryWrites=true&w=majority&appName=Cluster0
+DATABASE_SUBWAY_SERVICE=mongodb+srv://user:pass@domaint/subway?retryWrites=true&w=majority&appName=Cluster0
+DATABASE_TICKET_SERVICE=mongodb+srv://user:pass@domain/ticket?retryWrites=true&w=majority&appName=Cluster0
 ```
 
 Toàn bộ service sẽ chạy ở profile `dev` (ngoại trừ Config-Server)
@@ -65,6 +69,10 @@ Service receives:
 > X-User-Id: 99
 > X-User-Role: USER
 ```
+
+### 4. Mock JWT
+- Gửi API-gateway dùng JWT theo format: `$mock:<user id>`
+- VD mock user ID là `123` thì ghi `$mock:123`
 
 ---
 
