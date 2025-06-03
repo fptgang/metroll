@@ -8,7 +8,7 @@ import java.time.ZoneOffset;
 import java.util.TimeZone;
 
 @SpringBootApplication(scanBasePackages = {"com.fpt.metroll"})
-@EnableFeignClients
+@EnableFeignClients(basePackages = {"com.fpt.metroll"})
 public class BackendApplication {
 
     public static void main(String[] args) {
