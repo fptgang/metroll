@@ -14,7 +14,7 @@
 
 ### 2. Thêm Firebase service account
 
-- Lưu file `firebase-service-account.json` vào thư mục `api-gateway/src/main/resources`
+Thêm Firebase service account (json) vào HCP Vault Secrets
 
 ### 3. Setup Tool dev (optional)
 
@@ -42,6 +42,9 @@ CLOUDAMQP_PORT=5671
 CLOUDAMQP_USERNAME=
 CLOUDAMQP_PASSWORD=
 CLOUDAMQP_VHOST=
+HCP_CLIENT_ID=
+HCP_CLIENT_SECRET=
+HCP_SECRET_URL_FIREBASE=https://api.cloud.hashicorp.com/secrets/2023-11-28/organizations/xxx/projects/xxx/apps/xxx/secrets/firebase_service_account:open
 ```
 
 Toàn bộ service sẽ chạy ở profile `dev` (ngoại trừ Config-Server)
@@ -76,8 +79,9 @@ Service receives:
 ```
 
 ### 4. Mock JWT
-- Gửi API-gateway dùng JWT theo format: `$mock:<user id>`
+- Gửi API-gateway dùng JWT theo format: `$mock:<user id>[:<user role>]`
 - VD mock user ID là `123` thì ghi `$mock:123`
+- VD mock user ID là `123` với role `ADMIN` thì ghi `$mock:123:ADMIN`
 - Cần login 1 lần trước để tạo tài khoản
 ```
 curl -X 'POST' \

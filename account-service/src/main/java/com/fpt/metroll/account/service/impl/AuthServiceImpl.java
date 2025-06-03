@@ -34,8 +34,7 @@ public class AuthServiceImpl implements AuthService {
 
         AccountDto account = accountService.findById(uid).orElseGet(() -> {
             return SecurityUtil.elevate(AccountRole.ADMIN, () -> {
-                return accountService.create(AccountCreateRequest.builder()
-                        .id(uid)
+                return accountService.create(uid, AccountCreateRequest.builder()
                         .email(email)
                         .fullName(email)
                         .phoneNumber("")

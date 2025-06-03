@@ -46,5 +46,5 @@ bin/
 /.env
 !**/.env
 /wrapper/
-/api-gateway/src/main/resources/firebase-service-account.json
+/**/src/main/resources/firebase-service-account.json
 /.env

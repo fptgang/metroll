@@ -15,7 +15,7 @@ public final class FirebaseFakeProfileRegistryImpl implements FirebaseFakeProfil
     @Value("${metroll.auth.fake-firebase-profiles:false}")
     private boolean enableFakeFirebaseProfiles;
 
-    private FirebaseToken mockFirebaseToken(String accountId) {
+    private FirebaseToken mockFirebaseToken(String accountId, String role) {
         try {
             var claims = Map.of(
                     "sub", accountId,
@@ -24,7 +24,7 @@ public final class FirebaseFakeProfileRegistryImpl implements FirebaseFakeProfil
                     "email", "mock-"+accountId+"@example.com",
                     "email_verified", true,
                     "iss", "https://securetoken.google.com/project-id",
-                    "role", "CUSTOMER"
+                    "role", role
             );
 
             var cons = FirebaseToken.class.getDeclaredConstructor(Map.class);
@@ -37,14 +37,16 @@ public final class FirebaseFakeProfileRegistryImpl implements FirebaseFakeProfil
 
     @Override
     public FirebaseToken verifyIdToken(String token) {
-        // e.g. $mock:681c4a0a45880c5c0a58e6ed
+        // e.g. $mock:681c4a0a45880c5c0a58e6ed[:CUSTOMER]
         if (!enableFakeFirebaseProfiles || !token.startsWith("$mock:")) {
             return null;
         }
 
-        String accountId = token.substring("$mock:".length());
+        String[] params = token.substring("$mock:".length()).split(":");
+        String accountId = params[0];
         Preconditions.checkArgument(!accountId.isBlank(), "Invalid account ID");
-        return mockFirebaseToken(accountId);
+        String role = params.length < 2 ? "CUSTOMER" : params[1];
+        return mockFirebaseToken(accountId, role);
     }
 }
 

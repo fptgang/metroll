@@ -1,6 +1,6 @@
-package com.fpt.metroll.gateway.config;
+package com.fpt.metroll.account.config;
 
-import com.fpt.metroll.gateway.service.SecretStoreService;
+import com.fpt.metroll.shared.service.SecretStoreService;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;

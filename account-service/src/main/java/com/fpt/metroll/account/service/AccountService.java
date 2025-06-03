@@ -13,6 +13,7 @@ public interface AccountService {
     Optional<AccountDto> findById(String id);
     AccountDto requireById(String id);
     AccountDto create(AccountCreateRequest request);
+    AccountDto create(String id, AccountCreateRequest request);
     AccountDto update(String id, AccountUpdateRequest request);
     void deactivate(String id);
 }

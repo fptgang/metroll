@@ -16,6 +16,9 @@ import com.fpt.metroll.shared.util.MongoHelper;
 import com.fpt.metroll.shared.util.SecurityUtil;
 import org.springframework.stereotype.Service;
 import org.springframework.data.mongodb.core.query.Criteria;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.UserRecord;
+import com.google.firebase.auth.FirebaseAuthException;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -85,9 +88,31 @@ public class AccountServiceImpl implements AccountService {
         if (!SecurityUtil.hasRole(AccountRole.ADMIN))
             throw new NoPermissionException();
 
-        Account account = accountMapper.toDocument(request);
-        account.setActive(true);
+        try {
+            var userRecord = FirebaseAuth.getInstance().createUser(new UserRecord.CreateRequest()
+                    .setEmail(request.getEmail())
+                    .setDisplayName(request.getFullName())
+                    .setPhoneNumber(request.getPhoneNumber())
+                    .setEmailVerified(false));
 
+            Account account = accountMapper.toDocument(request);
+            account.setId(userRecord.getUid());
+            account.setActive(true);
+            account = accountRepository.save(account);
+            return accountMapper.toDto(account);
+        } catch (FirebaseAuthException e) {
+            throw new IllegalStateException("Failed to create Firebase user", e);
+        }
+    }
+
+    @Override
+    public AccountDto create(String id, AccountCreateRequest request) {
+        if (!SecurityUtil.hasRole(AccountRole.ADMIN))
+            throw new NoPermissionException();
+
+        Account account = accountMapper.toDocument(request);
+        account.setId(id);
+        account.setActive(true);
         account = accountRepository.save(account);
         return accountMapper.toDto(account);
     }
