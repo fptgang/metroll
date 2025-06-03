@@ -76,6 +76,8 @@ jobs:
           else
             echo "target=skip" >> $GITHUB_ENV
           fi
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
 
       - name: Build with Gradle Wrapper
         if: env.target != 'skip'
