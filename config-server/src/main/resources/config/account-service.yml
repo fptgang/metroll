@@ -14,6 +14,37 @@ spring:
       uri: ${DATABASE_ACCOUNT_SERVICE}
       ssl: {enabled: true}
 
+  cloud:
+    stream:
+      bindings:
+        loginAttempt-out-0:
+          destination: loginAttempt
+          content-type: application/json
+        loginAttempt-in-0:
+          destination: loginAttempt
+          content-type: application/json
+      rabbit:
+        bindings:
+          loginAttempt-out-0:
+            producer:
+              exchangeType: fanout
+              routingKey: loginAttempt
+          loginAttempt-in-0:
+            consumer:
+              exchangeType: fanout
+              queueName: loginAttempt
+              bindingRoutingKey: loginAttempt
+
+  rabbitmq:
+    host: ${CLOUDAMQP_HOST}
+    port: ${CLOUDAMQP_PORT}
+    username: ${CLOUDAMQP_USERNAME}
+    password: ${CLOUDAMQP_PASSWORD}
+    publisher-confirms: true
+    virtual-host: ${CLOUDAMQP_VHOST}
+    ssl:
+      enabled: true
+
 server:
   forward-headers-strategy: framework
 

@@ -37,6 +37,11 @@ DATABASE_ACCOUNT_SERVICE=mongodb+srv://user:pass@domain/account?retryWrites=true
 DATABASE_ORDER_SERVICE=mongodb+srv://user:pass@domain/order?retryWrites=true&w=majority&appName=Cluster0
 DATABASE_SUBWAY_SERVICE=mongodb+srv://user:pass@domaint/subway?retryWrites=true&w=majority&appName=Cluster0
 DATABASE_TICKET_SERVICE=mongodb+srv://user:pass@domain/ticket?retryWrites=true&w=majority&appName=Cluster0
+CLOUDAMQP_HOST=armadillo.rmq.cloudamqp.com
+CLOUDAMQP_PORT=5671
+CLOUDAMQP_USERNAME=
+CLOUDAMQP_PASSWORD=
+CLOUDAMQP_VHOST=
 ```
 
 Toàn bộ service sẽ chạy ở profile `dev` (ngoại trừ Config-Server)

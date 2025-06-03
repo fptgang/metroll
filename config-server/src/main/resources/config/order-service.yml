@@ -14,6 +14,16 @@ spring:
       uri: ${DATABASE_ORDER_SERVICE}
       ssl: {enabled: true}
 
+  rabbitmq:
+    host: ${CLOUDAMQP_HOST}
+    port: ${CLOUDAMQP_PORT}
+    username: ${CLOUDAMQP_USERNAME}
+    password: ${CLOUDAMQP_PASSWORD}
+    publisher-confirms: true
+    virtual-host: ${CLOUDAMQP_VHOST}
+    ssl:
+      enabled: true
+
 server:
   forward-headers-strategy: framework
 

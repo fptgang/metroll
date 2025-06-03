@@ -8,18 +8,22 @@ import com.fpt.metroll.shared.domain.enums.AccountRole;
 import com.fpt.metroll.shared.util.SecurityUtil;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseAuthException;
+import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
 @Service
 public class AuthServiceImpl implements AuthService {
     private final AccountService accountService;
+    private final StreamBridge streamBridge;
 
-    public AuthServiceImpl(AccountService accountService) {
+    public AuthServiceImpl(AccountService accountService, StreamBridge streamBridge) {
         this.accountService = accountService;
+        this.streamBridge = streamBridge;
     }
 
     @Override
@@ -49,6 +53,14 @@ public class AuthServiceImpl implements AuthService {
                 throw new IllegalStateException("Failed to set custom user claims", e);
             }
         }
+
+        // Publish login attempt
+        Map<String, Object> loginAttempt = new HashMap<>();
+        loginAttempt.put("userId", uid);
+        loginAttempt.put("email", email);
+        loginAttempt.put("timestamp", LocalDateTime.now().toString());
+        loginAttempt.put("role", account.getRole().toString());
+        streamBridge.send("loginAttempt-out-0", loginAttempt);
 
         return account;
     }

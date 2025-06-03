@@ -14,10 +14,8 @@ And there are other business feature services.
 
 Ensure the code goes into the right module:
 - account-service
-- station-service
 - ticket-service
-- train-service
-- discount-service
+- subway-service
 - order-service
 - api-gateway
 - service-registry
@@ -31,3 +29,4 @@ The expected running environment is containerization with three core components 
 
 For example, a request from the host: `http://localhost:8080/account/{path}` will be routed to account-service at `http:/{account-service-address-provided-by-Eureka}/{path}`
 
+The build.gradle at the project root contains most of dependency declaration. Only module-specific dependency is declared in the respective build.gradle

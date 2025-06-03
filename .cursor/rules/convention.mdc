@@ -16,6 +16,7 @@ alwaysApply: true
 > getUserRole(): return current role (or null if not auth); no exception raised
 > requireUserEmail(): check auth first, return current email (not-null)
 > getUserEmail(): return current email (or null if not auth); no exception raised
+> elevate(): temporarily elevate the authenticated user onto a higher role, e.g. as ADMIN
 - Use com.fpt.metroll.shared.exception.NoPermissionException to throw no-permission error in services
 
 4. Use MongoHelper for Pagination with Spring Data MongoDB
@@ -76,3 +77,16 @@ return PageMapper.INSTANCE.toPageDTO(res);
 - Ensure the method definition matches the right controller in feature-specific service
 - Ensure the DTOs, Enums and Mappers relevant to the method definition is also put in the shared module: com.fpt.metroll.shared.domain.dto, com.fpt.metroll.shared.domain.enums, com.fpt.metroll.shared.domain.mapper to ensure syntax check across modules
 - FeignClientInterceptor already exists to handle cross-service authorization, you do not have to care this
+
+10. Configuration
+- Centralize all configuration files in config-server module: config-server/src/main/resources/config
+- Prefer file-based configuration than in-code unless there is a need for complex customization
+
+11. Logging
+- Use Lombok `@Slf4j`
+- Prefer logging warning and error
+- Only logging info if necessary
+
+12. Technology
+- Use Spring Cloud Streams with RabbitMQ
+- Use Spring Data MongoDB
