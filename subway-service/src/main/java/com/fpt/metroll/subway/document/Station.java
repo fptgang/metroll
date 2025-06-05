@@ -32,7 +32,7 @@ public class Station {
     private StationStatus status;
     private String description;
 
-    private List<String> lineIds;
+    private List<LineStationInfo> lineStationInfos;
 
     @CreatedDate
     private Instant createdAt;
@@ -47,6 +47,16 @@ public class Station {
     public static class Coordinates {
         private double lat;
         private double lng;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class LineStationInfo {
+        private String lineId;
+        private String code;
+        private Integer sequence;
     }
 
     public enum StationStatus {
