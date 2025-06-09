@@ -16,6 +16,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("stations/v1")
 public class StationController {
@@ -50,5 +52,17 @@ public class StationController {
             @PathVariable("code") String stationCode
     ) {
         return ResponseEntity.ok(stationService.getStationByCode(stationCode));
+    }
+
+    @PostMapping("create-list")
+    @Operation(summary = "Create a list of stations")
+    public ResponseEntity<List<StationDto>> createStationList(
+            @RequestBody List<StationDto> stationDtos
+    ) {
+        List<StationDto> createdStations = stationDtos.stream()
+                .map(stationService::save)
+                .toList();
+        return ResponseEntity.ok(createdStations);
+
     }
 }

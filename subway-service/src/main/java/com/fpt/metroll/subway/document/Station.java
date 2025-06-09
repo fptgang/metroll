@@ -11,6 +11,7 @@ import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 
 @Data
@@ -32,7 +33,8 @@ public class Station {
     private StationStatus status;
     private String description;
 
-    private List<LineStationInfo> lineStationInfos;
+    @Builder.Default
+    private List<LineStationInfo> lineStationInfos = new ArrayList<>();
 
     @CreatedDate
     private Instant createdAt;
@@ -54,7 +56,7 @@ public class Station {
     @AllArgsConstructor
     @Builder
     public static class LineStationInfo {
-        private String lineId;
+        private String lineCode;
         private String code;
         private Integer sequence;
     }

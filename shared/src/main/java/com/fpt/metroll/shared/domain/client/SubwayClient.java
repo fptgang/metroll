@@ -11,10 +11,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
 @FeignClient(name = "subway-service")
-public interface StationClient {
-
-    @PostMapping("/stations/v1")
-    StationDto saveStation(@RequestBody StationDto stationDto);
+public interface SubwayClient {
 
     @PostMapping("/stations/v1/list")
     PageDto<StationDto> listStations(
@@ -23,4 +20,12 @@ public interface StationClient {
 
     @GetMapping("/stations/v1/{code}")
     StationDto getStationByCode(@PathVariable("code") String stationCode);
+
+    @PostMapping("/lines/v1/list")
+    PageDto<StationDto> listLines(
+            @RequestBody StationQueryParam queryParam,
+            PageableDto pageable);
+
+    @GetMapping("/lines/v1/{code}")
+    StationDto getLineByCode(@PathVariable("code") String lineCode);
 }

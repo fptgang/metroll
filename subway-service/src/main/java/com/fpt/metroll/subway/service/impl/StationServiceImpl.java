@@ -73,8 +73,8 @@ public class StationServiceImpl implements StationService {
         if (queryParam.getStatus() != null && !queryParam.getStatus().isEmpty()) {
             query.addCriteria(Criteria.where("status").is(queryParam.getStatus()));
         }
-        if (queryParam.getLineId() != null && !queryParam.getLineId().isEmpty()) {
-            query.addCriteria(Criteria.where("lineStationInfos.lineId").is(queryParam.getLineId()));
+        if (queryParam.getLineCode() != null && !queryParam.getLineCode().isEmpty()) {
+            query.addCriteria(Criteria.where("lineStationInfos.code").is(queryParam.getLineCode()));
         }
 
         return query;

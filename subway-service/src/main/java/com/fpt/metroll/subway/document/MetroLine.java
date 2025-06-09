@@ -11,6 +11,7 @@ import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 
 @Data
@@ -32,7 +33,8 @@ public class MetroLine {
     private LineStatus status;
     private String description;
 
-    private List<Segment> segments;
+    @Builder.Default
+    private List<Segment> segments = new ArrayList<>();
 
     @CreatedDate
     private Instant createdAt;
@@ -46,8 +48,8 @@ public class MetroLine {
     @Builder
     public static class Segment {
         private Integer sequence;
-        private String startStationId;
-        private String endStationId;
+        private String startStationCode;
+        private String endStationCode;
         private Double distance;
         private Integer travelTime;
         private String description;

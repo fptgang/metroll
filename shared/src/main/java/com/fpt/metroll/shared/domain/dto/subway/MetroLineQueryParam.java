@@ -9,12 +9,12 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class StationQueryParam {
+public class MetroLineQueryParam {
+
     private String name;
     private String code;
 
     @Builder.Default
     private String status = "OPERATIONAL";
 
-    private String lineCode;
 }

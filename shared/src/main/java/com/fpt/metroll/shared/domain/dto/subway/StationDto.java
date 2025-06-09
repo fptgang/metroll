@@ -28,7 +28,7 @@ public class StationDto {
     @AllArgsConstructor
     @Builder
     public static class LineStationInfoDto {
-        private String lineId;
+        private String lineCode;
         private String code;
         private Integer sequence;
     }

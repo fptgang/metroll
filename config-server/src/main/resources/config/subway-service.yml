@@ -13,6 +13,7 @@ spring:
     mongodb:
       uri: ${DATABASE_SUBWAY_SERVICE}
       ssl: {enabled: true}
+      auto-index-creation: true
 
   rabbitmq:
     host: ${CLOUDAMQP_HOST}
