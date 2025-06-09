@@ -27,7 +27,9 @@ public class MetroLineController {
     }
 
     @GetMapping("/{code}")
-    public ResponseEntity<MetroLineDto> getLineByCode(String code) {
+    public ResponseEntity<MetroLineDto> getLineByCode(
+        @PathVariable String code
+    ) {
         return ResponseEntity.ok(metroLineService.getMetroLineByCode(code));
     }
 

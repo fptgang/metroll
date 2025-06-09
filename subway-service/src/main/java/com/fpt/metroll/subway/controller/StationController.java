@@ -54,7 +54,7 @@ public class StationController {
         return ResponseEntity.ok(stationService.getStationByCode(stationCode));
     }
 
-    @PostMapping("create-list")
+    @PostMapping("/create-list")
     @Operation(summary = "Create a list of stations")
     public ResponseEntity<List<StationDto>> createStationList(
             @RequestBody List<StationDto> stationDtos
