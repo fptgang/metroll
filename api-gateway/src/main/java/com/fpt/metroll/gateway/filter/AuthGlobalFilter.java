@@ -45,6 +45,10 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
                     String email = firebaseToken.getEmail();
                     String role = (String) firebaseToken.getClaims().get("role");
 
+                    if (role == null) {
+                        role = "CUSTOMER";
+                    }
+
                     ServerHttpRequest modifiedRequest = exchange.getRequest().mutate()
                             .header("X-User-Id", uid)
                             .header("X-User-Role", role)
