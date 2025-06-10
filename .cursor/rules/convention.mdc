@@ -90,3 +90,58 @@ return PageMapper.INSTANCE.toPageDTO(res);
 12. Technology
 - Use Spring Cloud Streams with RabbitMQ
 - Use Spring Data MongoDB
+
+13. Utilities
+- Prefer org.apache.commons.lang3 (Apache Commons Lang 3) and com.google.common (Guava) for utilties to writing your own utilities
+
+14. Conditional response
+- Use SecurityUtil to override filter params
+E.g. an endpoint has a "userId" filter, this is only meaningful to ADMIN (or sometimes STAFF), otherwise, you use SecurityUtil#requireUserId or SecurityUtil#getUserId to override that
+
+- Write Mapstruct Decorator to intercept the original DTO without duplication. This is typically used for conditional response, redacting sensitive information, role-based DTO customization
+```java
+@Mapper(componentModel = "spring", uses = { AnswerOptionMapper.class })
+@DecoratedWith(QuestionAskMapperDecorator.class)
+public interface QuestionAskMapper {
+    QuestionAskMapper INSTANCE = Mappers.getMapper(QuestionAskMapper.class);
+
+    QuestionAskDto toDto(Question question);
+}
+```
+```java
+@Component
+public abstract class QuestionAskMapperDecorator implements QuestionAskMapper {
+    @Autowired
+    private QuestionAskMapper delegate;
+
+    @Override
+    public QuestionAskDto toDto(Question question) {
+        QuestionAskDto dto = delegate.toDto(question);
+
+        dto.setAnswerOptions(redactAnswerOptions(question.getAnswerOptions()));
+        if (question.getWordsAnswer() != null) {
+            dto.setWordsLength(question.getWordsAnswer().stream()
+                    .map(String::length)
+                    .collect(Collectors.toList()));
+        }
+
+        return dto;
+    }
+
+    private List<AnswerOptionDto> redactAnswerOptions(List<AnswerOption> answerOptions) {
+        if (answerOptions == null) {
+            return null;
+        }
+        return answerOptions.stream()
+                .map(option -> AnswerOptionDto.builder()
+                        .content(option.getContent())
+                        .isCorrect(null)
+                        .explanation(null)
+                        .build())
+                .collect(Collectors.toList());
+    }
+}
+```
+
+15. Monetary Fields
+- Any fields storing money, credits, etc MUST use BigDecimal. You also need to tag @Field(targetType=DECIMAL128) on the corresponding field in MongoDB Document for precise serialization

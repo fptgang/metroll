@@ -99,6 +99,7 @@ public class AccountServiceImpl implements AccountService {
             account.setId(userRecord.getUid());
             account.setActive(true);
             account = accountRepository.save(account);
+
             return accountMapper.toDto(account);
         } catch (FirebaseAuthException e) {
             throw new IllegalStateException("Failed to create Firebase user", e);

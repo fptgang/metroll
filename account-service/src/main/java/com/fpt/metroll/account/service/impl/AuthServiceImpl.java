@@ -32,8 +32,8 @@ public class AuthServiceImpl implements AuthService {
         String email = SecurityUtil.requireUserEmail();
         String uid = SecurityUtil.getUserId();
 
-        AccountDto account = accountService.findById(uid).orElseGet(() -> {
-            return SecurityUtil.elevate(AccountRole.ADMIN, () -> {
+        AccountDto account = SecurityUtil.elevate(AccountRole.ADMIN, () -> {
+            return accountService.findById(uid).orElseGet(() -> {
                 return accountService.create(uid, AccountCreateRequest.builder()
                         .email(email)
                         .fullName(email)
