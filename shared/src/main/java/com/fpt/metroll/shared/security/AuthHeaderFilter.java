@@ -4,6 +4,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -17,6 +18,7 @@ import java.util.Collections;
 import java.util.List;
 
 @Component
+@Slf4j
 public class AuthHeaderFilter extends OncePerRequestFilter {
 
     @Override
@@ -27,7 +29,9 @@ public class AuthHeaderFilter extends OncePerRequestFilter {
         String role = request.getHeader("X-User-Role");
         String email = request.getHeader("X-User-Email");
 
-        if (userId != null && role != null) {
+        log.debug("AuthHeader: userId={}, role={}, email={}", userId, role, email);
+
+        if (userId != null && role != null && email != null) {
             List<GrantedAuthority> authorities = Collections.singletonList(
                     new SimpleGrantedAuthority("ROLE_" + role)
             );
