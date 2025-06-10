@@ -53,11 +53,12 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
 
                     return chain.filter(exchange.mutate().request(modifiedRequest).build());
                 } catch (FirebaseAuthException e) {
-                    exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+                    e.printStackTrace();
+                    exchange.getResponse().setStatusCode(HttpStatus.INTERNAL_SERVER_ERROR);
                     return exchange.getResponse().setComplete();
                 }
             } else {
-                exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+                exchange.getResponse().setStatusCode(HttpStatus.BAD_REQUEST);
                 return exchange.getResponse().setComplete();
             }
         }
