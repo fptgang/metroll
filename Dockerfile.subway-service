@@ -21,4 +21,5 @@ WORKDIR .
 COPY /subway-service/build/libs/*.jar app.jar
 
 # Run the Spring Boot app
-ENTRYPOINT ["java", "-Xmx1G", "-jar", "app.jar"]
+ENTRYPOINT ["java"]
+CMD ["-Xmx1G", "-jar", "app.jar"]

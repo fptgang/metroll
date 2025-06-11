@@ -48,3 +48,4 @@ bin/
 /wrapper/
 /**/src/main/resources/firebase-service-account.json
 /.env
+loadtest_k6/
