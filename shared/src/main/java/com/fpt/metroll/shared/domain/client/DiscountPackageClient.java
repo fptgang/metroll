@@ -6,7 +6,7 @@ import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
-@FeignClient(name = "account-service")
+@FeignClient(name = "discount-package-service")
 public interface DiscountPackageClient {
 
     @GetMapping("/account/discount-packages/{packageId}")
