@@ -20,6 +20,7 @@ import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -148,11 +149,61 @@ public class TicketServiceImpl implements TicketService {
                 .ticketOrderDetailId(ticketUpsertRequest.getTicketOrderDetailId())
                 .purchaseDate(Instant.now())
                 .validUntil(ticketUpsertRequest.getValidUntil())
-                .status(TicketStatus.VALID) // Default status
+                .status(ticketUpsertRequest.getStatus() != null ? ticketUpsertRequest.getStatus() : TicketStatus.VALID)
                 .build();
         ticket = repository.save(ticket);
         log.info("Created ticket: {}", ticket.getId());
         return mapper.toDto(ticket);
+    }
+
+    @Override
+    public List<TicketDto> createTickets(List<TicketUpsertRequest> ticketRequests) {
+        Preconditions.checkNotNull(ticketRequests, "Ticket requests cannot be null");
+        Preconditions.checkArgument(!ticketRequests.isEmpty(), "Ticket requests cannot be empty");
+
+        List<Ticket> tickets = new ArrayList<>();
+        
+        for (TicketUpsertRequest request : ticketRequests) {
+            Preconditions.checkNotNull(request, "Ticket request cannot be null");
+            Preconditions.checkArgument(request.getTicketOrderDetailId() != null && !request.getTicketOrderDetailId().isBlank(),
+                    "Order detail ID cannot be null or blank");
+
+            // Generate unique ticket number if not provided
+            String ticketNumber = request.getTicketNumber();
+            if (ticketNumber == null || ticketNumber.isBlank()) {
+                ticketNumber = generateTicketNumber();
+            }
+
+            // Check if ticket number already exists
+            if (repository.findByTicketNumber(ticketNumber).isPresent()) {
+                throw new IllegalArgumentException("Ticket with number " + ticketNumber + " already exists");
+            }
+
+            Ticket ticket = Ticket.builder()
+                    .createdAt(Instant.now())
+                    .updatedAt(Instant.now())
+                    .ticketType(request.getTicketType())
+                    .ticketNumber(ticketNumber)
+                    .ticketOrderDetailId(request.getTicketOrderDetailId())
+                    .purchaseDate(Instant.now())
+                    .validUntil(request.getValidUntil())
+                    .status(request.getStatus() != null ? request.getStatus() : TicketStatus.VALID)
+                    .build();
+            
+            tickets.add(ticket);
+        }
+
+        // Save all tickets in batch
+        List<Ticket> savedTickets = repository.saveAll(tickets);
+        log.info("Created {} tickets in batch", savedTickets.size());
+        
+        return savedTickets.stream()
+                .map(mapper::toDto)
+                .collect(Collectors.toList());
+    }
+
+    private String generateTicketNumber() {
+        return "TKT-" + System.currentTimeMillis() + "-" + (int)(Math.random() * 1000);
     }
 
 }

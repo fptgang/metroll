@@ -77,4 +77,10 @@ public class TicketController {
     public ResponseEntity<TicketDto> createTicket(@RequestBody @Valid TicketUpsertRequest ticketUpsertRequest) {
         return ResponseEntity.ok(ticketService.create(ticketUpsertRequest));
     }
+
+    @Operation(summary = "Create multiple tickets")
+    @PostMapping("/batch")
+    public ResponseEntity<List<TicketDto>> createTickets(@RequestBody @Valid List<TicketUpsertRequest> ticketRequests) {
+        return ResponseEntity.ok(ticketService.createTickets(ticketRequests));
+    }
 }

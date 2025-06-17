@@ -18,4 +18,5 @@ public class TicketUpsertRequest {
     private String ticketNumber;
     private String ticketOrderDetailId;
     private Instant validUntil;
+    private TicketStatus status;
 }
