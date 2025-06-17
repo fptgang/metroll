@@ -87,6 +87,7 @@ businessFeatures.each { p ->
 
         implementation 'com.google.guava:guava:33.4.8-jre'
         implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
+        implementation 'vn.payos:payos-java:1.0.6'
 
 //        testImplementation 'org.springframework.boot:spring-boot-starter-test'
 //        testImplementation 'org.springframework.boot:spring-boot-testcontainers'
