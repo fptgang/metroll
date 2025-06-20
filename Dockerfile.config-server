@@ -1,24 +1,26 @@
-# Stage 1: Build the application
-#FROM eclipse-temurin:21-jdk-jammy
+###############################
+# Stage 1 – build the module  #
+###############################
+FROM eclipse-temurin:21-jdk-jammy AS builder
+WORKDIR /workspace
 
-# Set working directory
-#WORKDIR /app
+# Copy Gradle wrapper and build scripts first
+COPY gradlew settings.gradle build.gradle ./
+COPY gradle gradle
 
-# Copy the entire project
-#COPY ./ .
+# Copy source
+COPY . .
 
-# Build only the desired module's bootJar
-#RUN ./gradlew --no-daemon :config-server:bootJar
+# Build only this module's Boot jar
+RUN ./gradlew --no-daemon :config-server:bootJar -x test
 
-# Stage 2: Run the application
+###############################
+# Stage 2 – slim runtime      #
+###############################
 FROM eclipse-temurin:21-jdk-jammy
+WORKDIR /app
 
-#WORKDIR /app
-WORKDIR .
+# Copy the fat-jar from builder
+COPY --from=builder /workspace/config-server/build/libs/*SNAPSHOT.jar app.jar
 
-# Copy the built jar from the previous stage
-#COPY --from=builder /app/config-server/build/libs/*.jar app.jar
-COPY /config-server/build/libs/*.jar app.jar
-
-# Run the Spring Boot app
 ENTRYPOINT ["java", "-Xmx1G", "-jar", "app.jar"]
