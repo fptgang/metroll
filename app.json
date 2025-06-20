@@ -1,0 +1,23 @@
+{
+  "name": "metroll",
+  "description": "Metro ticketing system — Spring Cloud micro-services",
+  "buildpacks": [
+    { "url": "heroku/jvm" }
+  ],
+  "env": {
+    "JDK_JAVA_OPTIONS": { "value": "-XX:+UseContainerSupport" },
+    "JAVA_TOOL_OPTIONS": { "value": "-Dfile.encoding=UTF8" }
+  },
+  "formation": {
+    "web":             { "quantity": 1, "size": "standard-1x" },
+    "config_server":    { "quantity": 1, "size": "standard-1x" },
+    "service_registry": { "quantity": 1, "size": "standard-1x" },
+    "account_service":  { "quantity": 1, "size": "standard-1x" },
+    "order_service":    { "quantity": 1, "size": "standard-1x" },
+    "subway_service":   { "quantity": 1, "size": "standard-1x" },
+    "ticket_service":   { "quantity": 1, "size": "standard-1x" }
+  },
+  "scripts": {
+    "postdeploy": "echo 'Initial dyno formation created'"
+  }
+} 
