@@ -28,24 +28,48 @@ spring:
             #- Header=X-Api-Version, 1
           filters:
             - RewritePath=/account/(?<path>.*), /$\{path}
+        - id: account-service-plural
+          uri: lb://account-service
+          predicates:
+            - Path=/accounts/**
+          filters:
+            - RewritePath=/accounts/(?<path>.*), /accounts/$\{path}
         - id: subway-service
           uri: lb://subway-service
           predicates:
             - Path=/subway/**
           filters:
             - RewritePath=/subway/(?<path>.*), /$\{path}
+        - id: subway-service-plural
+          uri: lb://subway-service
+          predicates:
+            - Path=/subways/**
+          filters:
+            - RewritePath=/subways/(?<path>.*), /$\{path}
         - id: order-service
           uri: lb://order-service
           predicates:
             - Path=/order/**
           filters:
             - RewritePath=/order/(?<path>.*), /$\{path}
+        - id: order-service-plural
+          uri: lb://order-service
+          predicates:
+            - Path=/orders/**
+          filters:
+            - RewritePath=/orders/(?<path>.*), /$\{path}
         - id: ticket-service
           uri: lb://ticket-service
           predicates:
             - Path=/ticket/**
           filters:
             - RewritePath=/ticket/(?<path>.*), /$\{path}
+        - id: ticket-service-plural
+          uri: lb://ticket-service
+          predicates:
+            - Path=/tickets/**
+          filters:
+            - RewritePath=/tickets/(?<path>.*), /$\{path}
         - id: openapi-proxy
           uri: http://api-gateway.metroll:${server.port}
           predicates:
