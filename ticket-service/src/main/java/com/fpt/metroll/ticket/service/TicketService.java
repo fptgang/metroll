@@ -27,4 +27,6 @@ public interface TicketService {
     void updateStatus(String id, TicketStatus status);
 
     TicketDto create(TicketUpsertRequest ticketUpsertRequest);
+    
+    List<TicketDto> createTickets(List<TicketUpsertRequest> ticketRequests);
 }

@@ -1,24 +1,24 @@
-# Stage 1: Build the application
-#FROM eclipse-temurin:21-jdk-jammy
+###############################
+# Stage 1 – build the module  #
+###############################
+FROM eclipse-temurin:21-jdk-jammy AS builder
+WORKDIR /workspace
 
-# Set working directory
-#WORKDIR /app
+# Caching layers
+COPY gradlew settings.gradle build.gradle ./
+COPY gradle gradle
 
-# Copy the entire project
-#COPY ./ .
+COPY . .
 
-# Build only the desired module's bootJar
-#RUN ./gradlew --no-daemon :service-registry:bootJar
+# Build jar
+RUN ./gradlew --no-daemon :service-registry:bootJar -x test
 
-# Stage 2: Run the application
+###############################
+# Stage 2 – runtime           #
+###############################
 FROM eclipse-temurin:21-jdk-jammy
+WORKDIR /app
 
-#WORKDIR /app
-WORKDIR .
+COPY --from=builder /workspace/service-registry/build/libs/*SNAPSHOT.jar app.jar
 
-# Copy the built jar from the previous stage
-#COPY --from=builder /app/service-registry/build/libs/*.jar app.jar
-COPY /service-registry/build/libs/*.jar app.jar
-
-# Run the Spring Boot app
 ENTRYPOINT ["java", "-Xmx1G", "-jar", "app.jar"]

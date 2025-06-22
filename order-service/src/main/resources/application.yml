@@ -1,5 +1,7 @@
 spring:
   application:
     name: order-service
+  main:
+    allow-bean-definition-overriding: true
   config:
     import: "configserver:http://config-server.metroll:8888"
