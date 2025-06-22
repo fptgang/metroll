@@ -49,3 +49,7 @@ bin/
 /**/src/main/resources/firebase-service-account.json
 /.env
 loadtest_k6/
+/deploy/terraform/terraform.tfstate
+/deploy/terraform/terraform.tfstate.backup
+/deploy/terraform/.terraform/providers/registry.terraform.io/hashicorp/azurerm/4.34.0/darwin_arm64/terraform-provider-azurerm_v4.34.0_x5
+/deploy/terraform/.terraform.lock.hcl

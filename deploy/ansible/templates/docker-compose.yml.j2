@@ -1,0 +1,202 @@
+version: '3.8'
+
+services:
+  ###### INFRA SERVICES
+  config-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.config-server
+    expose:
+      - "8888"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8888/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      metroll:
+        aliases:
+          - config-server.metroll
+
+  service-registry:
+    build:
+      context: .
+      dockerfile: Dockerfile.service-registry
+    expose:
+      - "8761"
+    environment:
+      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-default}
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    depends_on:
+      config-server:
+        condition: service_healthy
+    networks:
+      metroll:
+        aliases:
+          - service-registry.metroll
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.api-gateway
+    ports:
+      - "8080:8080" # Expose to host on 8080
+    environment:
+      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-default}
+    env_file:
+      - .env
+    depends_on:
+      config-server:
+        condition: service_healthy
+      service-registry:
+        condition: service_healthy
+    networks:
+      metroll:
+        aliases:
+          - api-gateway.metroll
+
+  ###### DATABASE & MESSAGING SERVICES
+  mongodb:
+    image: mongo:6
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      metroll:
+        aliases:
+          - mongodb.metroll
+
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      metroll:
+        aliases:
+          - rabbitmq.metroll
+
+  ###### BUSINESS SERVICES
+  account-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.account-service
+    environment:
+      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-default}
+    env_file:
+      - .env
+    depends_on:
+      config-server:
+        condition: service_healthy
+      service-registry:
+        condition: service_healthy
+      mongodb:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
+    networks:
+      metroll:
+        aliases:
+          - account-service.metroll
+
+  ticket-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.ticket-service
+    environment:
+      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-default}
+    env_file:
+      - .env
+    depends_on:
+      config-server:
+        condition: service_healthy
+      service-registry:
+        condition: service_healthy
+      mongodb:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
+    networks:
+      metroll:
+        aliases:
+          - ticket-service.metroll
+
+  subway-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.subway-service
+    environment:
+      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-default}
+    env_file:
+      - .env
+    # p95 75rps 2.6s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 768M
+    command:
+      - -Xmx512m
+      - -XX:+UseG1GC
+      - -XX:InitiatingHeapOccupancyPercent=30
+      - -jar
+      - app.jar
+    depends_on:
+      config-server:
+        condition: service_healthy
+      service-registry:
+        condition: service_healthy
+      mongodb:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
+    networks:
+      metroll:
+        aliases:
+          - subway-service.metroll
+
+  order-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.order-service
+    environment:
+      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-default}
+    env_file:
+      - .env
+    depends_on:
+      config-server:
+        condition: service_healthy
+      service-registry:
+        condition: service_healthy
+      mongodb:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
+    networks:
+      metroll:
+        aliases:
+          - order-service.metroll
+
+networks:
+  metroll:
+    driver: bridge
+
+volumes:
+  mongodb_data:
+  rabbitmq_data: 
