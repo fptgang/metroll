@@ -1,0 +1,102 @@
+server:
+  port: 8080
+  forward-headers-strategy: framework
+
+spring:
+  application:
+    name: api-gateway
+  docker:
+    compose:
+      enabled: false
+  jackson:
+    default-property-inclusion: non_null
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+      routes:
+        - id: account-service
+          uri: lb://account-service
+          predicates:
+            - Path=/account/**
+          filters:
+            - RewritePath=/account/(?<path>.*), /$\{path}
+        - id: subway-service
+          uri: lb://subway-service
+          predicates:
+            - Path=/subway/**
+          filters:
+            - RewritePath=/subway/(?<path>.*), /$\{path}
+        - id: order-service
+          uri: lb://order-service
+          predicates:
+            - Path=/order/**
+          filters:
+            - RewritePath=/order/(?<path>.*), /$\{path}
+        - id: ticket-service
+          uri: lb://ticket-service
+          predicates:
+            - Path=/ticket/**
+          filters:
+            - RewritePath=/ticket/(?<path>.*), /$\{path}
+        - id: openapi-proxy
+          uri: http://api-gateway.metroll:${server.port}
+          predicates:
+            - Path=/v3/api-docs/**
+          filters:
+            - RewritePath=/v3/api-docs/(?<path>.*), /$\{path}/v3/api-docs
+        - id: openapi-local
+          uri: http://localhost:${server.port}
+          predicates:
+            - Path=/v3/api-docs/**
+          filters:
+            - RewritePath=/v3/api-docs/(?<path>.*), /$\{path}/v3/api-docs
+
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowedOrigins: "*"
+            allowedMethods: "*"
+            allowedHeaders: "*"
+
+metroll:
+  exception:
+    log: true
+
+  auth:
+    fake-firebase-profiles: false
+
+springdoc:
+  cache:
+    disabled: true
+  version: '@springdoc.version@'
+  swagger-ui:
+    use-root-path: true
+    server-url: https://metroll.southeastasia.cloudapp.azure.com
+  # Configure servers for production deployment
+  api-docs:
+    servers:
+      - url: https://metroll.southeastasia.cloudapp.azure.com
+        description: Production Server (HTTPS)
+      - url: http://localhost:8080  
+        description: Development Server
+  show-actuator: true
+  
+  # Override default server generation
+  default-produces-media-type: application/json
+  default-consumes-media-type: application/json
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://service-registry.metroll:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true 
