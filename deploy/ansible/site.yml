@@ -152,7 +152,7 @@
     - name: Build Docker images
       args:
         chdir: "{{ app_root }}"
-      shell: docker compose build --no-cache
+      shell: docker compose build
 
     - name: Start containers
       args:
