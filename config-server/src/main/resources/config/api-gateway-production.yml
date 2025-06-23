@@ -21,30 +21,95 @@ spring:
           enabled: true
           lower-case-service-id: true
       routes:
-        - id: account-service
+        # Account Service Routes
+        - id: account-service-vouchers
+          uri: lb://account-service
+          predicates:
+            - Path=/vouchers/**
+        - id: account-service-accounts
+          uri: lb://account-service
+          predicates:
+            - Path=/accounts/**
+        - id: account-service-account-discount-packages
+          uri: lb://account-service
+          predicates:
+            - Path=/account-discount-packages/**
+        - id: account-service-discount-packages
+          uri: lb://account-service
+          predicates:
+            - Path=/discount-packages/**
+        - id: account-service-legacy
           uri: lb://account-service
           predicates:
             - Path=/account/**
           filters:
             - RewritePath=/account/(?<path>.*), /$\{path}
-        - id: subway-service
-          uri: lb://subway-service
+
+        # Ticket Service Routes
+        - id: ticket-service-timed-ticket-plans
+          uri: lb://ticket-service
           predicates:
-            - Path=/subway/**
-          filters:
-            - RewritePath=/subway/(?<path>.*), /$\{path}
-        - id: order-service
-          uri: lb://order-service
+            - Path=/timed-ticket-plans/**
+        - id: ticket-service-p2p-journeys
+          uri: lb://ticket-service
           predicates:
-            - Path=/order/**
+            - Path=/p2p-journeys/**
+        - id: ticket-service-ticket-validations
+          uri: lb://ticket-service
+          predicates:
+            - Path=/ticket-validations/**
+        - id: ticket-service-tickets
+          uri: lb://ticket-service
+          predicates:
+            - Path=/tickets/**
           filters:
-            - RewritePath=/order/(?<path>.*), /$\{path}
-        - id: ticket-service
+            - RewritePath=/tickets/(?<path>.*), /$\{path}
+        - id: ticket-service-legacy
           uri: lb://ticket-service
           predicates:
             - Path=/ticket/**
           filters:
             - RewritePath=/ticket/(?<path>.*), /$\{path}
+
+        # Order Service Routes
+        - id: order-service-payment
+          uri: lb://order-service
+          predicates:
+            - Path=/payment/**
+        - id: order-service-orders
+          uri: lb://order-service
+          predicates:
+            - Path=/orders/**
+          filters:
+            - RewritePath=/orders/(?<path>.*), /$\{path}
+        - id: order-service-legacy
+          uri: lb://order-service
+          predicates:
+            - Path=/order/**
+          filters:
+            - RewritePath=/order/(?<path>.*), /$\{path}
+
+        # Subway Service Routes
+        - id: subway-service-lines
+          uri: lb://subway-service
+          predicates:
+            - Path=/lines/**
+          filters:
+            - RewritePath=/lines/(?<path>.*), /lines/v1/$\{path}
+        - id: subway-service-stations
+          uri: lb://subway-service
+          predicates:
+            - Path=/stations/**
+          filters:
+            - RewritePath=/stations/(?<path>.*), /stations/v1/$\{path}
+        - id: subway-service-legacy
+          uri: lb://subway-service
+          predicates:
+            - Path=/subway/**
+          filters:
+            - RewritePath=/subway/(?<path>.*), /$\{path}
+
+        # OpenAPI Documentation Routes
         - id: openapi-proxy
           uri: http://api-gateway.metroll:${server.port}
           predicates:
@@ -57,40 +122,6 @@ spring:
             - Path=/v3/api-docs/**
           filters:
             - RewritePath=/v3/api-docs/(?<path>.*), /$\{path}/v3/api-docs
-        - id: account-service-plural
-          uri: lb://account-service
-          predicates:
-            - Path=/accounts/**
-        - id: subway-service-plural
-          uri: lb://subway-service
-          predicates:
-            - Path=/subways/**
-          filters:
-            - RewritePath=/subways/(?<path>.*), /$\{path}
-        - id: order-service-plural
-          uri: lb://order-service
-          predicates:
-            - Path=/orders/**
-          filters:
-            - RewritePath=/orders/(?<path>.*), /$\{path}
-        - id: ticket-service-plural
-          uri: lb://ticket-service
-          predicates:
-            - Path=/tickets/**
-          filters:
-            - RewritePath=/tickets/(?<path>.*), /$\{path}
-        - id: ticket-service-p2p-journeys
-          uri: lb://ticket-service
-          predicates:
-            - Path=/p2p-journeys/**
-        - id: ticket-service-ticket-validations
-          uri: lb://ticket-service
-          predicates:
-            - Path=/ticket-validations/**
-        - id: ticket-service-timed-ticket-plans
-          uri: lb://ticket-service
-          predicates:
-            - Path=/timed-ticket-plans/**
 
       default-filters:
         - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
