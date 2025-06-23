@@ -88,8 +88,6 @@ spring:
           uri: lb://ticket-service
           predicates:
             - Path=/tickets/**
-          filters:
-            - RewritePath=/tickets/(?<path>.*), /$\{path}
         - id: ticket-service-legacy
           uri: lb://ticket-service
           predicates:
@@ -106,8 +104,6 @@ spring:
           uri: lb://order-service
           predicates:
             - Path=/orders/**
-          filters:
-            - RewritePath=/orders/(?<path>.*), /$\{path}
         - id: order-service-legacy
           uri: lb://order-service
           predicates:
