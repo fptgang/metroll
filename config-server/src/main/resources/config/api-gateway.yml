@@ -21,31 +21,121 @@ spring:
           enabled: true
           lower-case-service-id: true
       routes:
+        # Base Service Routes (for OpenAPI aggregation)
         - id: account-service
           uri: lb://account-service
           predicates:
-            - Path=/account/**
-            #- Header=X-Api-Version, 1
+            - Path=/account-service/**
           filters:
-            - RewritePath=/account/(?<path>.*), /$\{path}
-        - id: subway-service
-          uri: lb://subway-service
+            - RewritePath=/account-service/(?<path>.*), /$\{path}
+        - id: ticket-service
+          uri: lb://ticket-service
           predicates:
-            - Path=/subway/**
+            - Path=/ticket-service/**
           filters:
-            - RewritePath=/subway/(?<path>.*), /$\{path}
+            - RewritePath=/ticket-service/(?<path>.*), /$\{path}
         - id: order-service
           uri: lb://order-service
           predicates:
-            - Path=/order/**
+            - Path=/order-service/**
           filters:
-            - RewritePath=/order/(?<path>.*), /$\{path}
-        - id: ticket-service
+            - RewritePath=/order-service/(?<path>.*), /$\{path}
+        - id: subway-service
+          uri: lb://subway-service
+          predicates:
+            - Path=/subway-service/**
+          filters:
+            - RewritePath=/subway-service/(?<path>.*), /$\{path}
+
+        # Account Service Routes
+        - id: account-service-vouchers
+          uri: lb://account-service
+          predicates:
+            - Path=/vouchers/**
+        - id: account-service-accounts
+          uri: lb://account-service
+          predicates:
+            - Path=/accounts/**
+        - id: account-service-account-discount-packages
+          uri: lb://account-service
+          predicates:
+            - Path=/account-discount-packages/**
+        - id: account-service-discount-packages
+          uri: lb://account-service
+          predicates:
+            - Path=/discount-packages/**
+        - id: account-service-legacy
+          uri: lb://account-service
+          predicates:
+            - Path=/account/**
+          filters:
+            - RewritePath=/account/(?<path>.*), /$\{path}
+
+        # Ticket Service Routes
+        - id: ticket-service-timed-ticket-plans
+          uri: lb://ticket-service
+          predicates:
+            - Path=/timed-ticket-plans/**
+        - id: ticket-service-p2p-journeys
+          uri: lb://ticket-service
+          predicates:
+            - Path=/p2p-journeys/**
+        - id: ticket-service-ticket-validations
+          uri: lb://ticket-service
+          predicates:
+            - Path=/ticket-validations/**
+        - id: ticket-service-tickets
+          uri: lb://ticket-service
+          predicates:
+            - Path=/tickets/**
+          filters:
+            - RewritePath=/tickets/(?<path>.*), /$\{path}
+        - id: ticket-service-legacy
           uri: lb://ticket-service
           predicates:
             - Path=/ticket/**
           filters:
             - RewritePath=/ticket/(?<path>.*), /$\{path}
+
+        # Order Service Routes
+        - id: order-service-payment
+          uri: lb://order-service
+          predicates:
+            - Path=/payment/**
+        - id: order-service-orders
+          uri: lb://order-service
+          predicates:
+            - Path=/orders/**
+          filters:
+            - RewritePath=/orders/(?<path>.*), /$\{path}
+        - id: order-service-legacy
+          uri: lb://order-service
+          predicates:
+            - Path=/order/**
+          filters:
+            - RewritePath=/order/(?<path>.*), /$\{path}
+
+        # Subway Service Routes
+        - id: subway-service-lines
+          uri: lb://subway-service
+          predicates:
+            - Path=/lines/**
+          filters:
+            - RewritePath=/lines/(?<path>.*), /lines/v1/$\{path}
+        - id: subway-service-stations
+          uri: lb://subway-service
+          predicates:
+            - Path=/stations/**
+          filters:
+            - RewritePath=/stations/(?<path>.*), /stations/v1/$\{path}
+        - id: subway-service-legacy
+          uri: lb://subway-service
+          predicates:
+            - Path=/subway/**
+          filters:
+            - RewritePath=/subway/(?<path>.*), /$\{path}
+
+        # OpenAPI Documentation Routes
         - id: openapi-proxy
           uri: http://api-gateway.metroll:${server.port}
           predicates:

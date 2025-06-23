@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.*;
 
 @Slf4j
 @RestController
-@RequestMapping("/")
+@RequestMapping("/accounts")
 @Tag(name = "Account", description = "Account API")
 @SecurityRequirement(name = "bearerAuth")
 public class AccountController {

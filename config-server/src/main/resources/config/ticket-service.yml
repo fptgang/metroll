@@ -14,6 +14,9 @@ spring:
       uri: ${DATABASE_TICKET_SERVICE}
       ssl: {enabled: true}
 
+  main:
+    allow-bean-definition-overriding: true
+
   rabbitmq:
     host: ${CLOUDAMQP_HOST}
     port: ${CLOUDAMQP_PORT}

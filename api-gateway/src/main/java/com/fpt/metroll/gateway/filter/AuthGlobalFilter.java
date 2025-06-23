@@ -45,6 +45,10 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
                     String email = firebaseToken.getEmail();
                     String role = (String) firebaseToken.getClaims().get("role");
 
+                    if (role == null) {
+                        role = "CUSTOMER";
+                    }
+
                     ServerHttpRequest modifiedRequest = exchange.getRequest().mutate()
                             .header("X-User-Id", uid)
                             .header("X-User-Role", role)
@@ -53,11 +57,12 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
 
                     return chain.filter(exchange.mutate().request(modifiedRequest).build());
                 } catch (FirebaseAuthException e) {
-                    exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+                    e.printStackTrace();
+                    exchange.getResponse().setStatusCode(HttpStatus.INTERNAL_SERVER_ERROR);
                     return exchange.getResponse().setComplete();
                 }
             } else {
-                exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+                exchange.getResponse().setStatusCode(HttpStatus.BAD_REQUEST);
                 return exchange.getResponse().setComplete();
             }
         }

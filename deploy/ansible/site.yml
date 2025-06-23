@@ -1,0 +1,253 @@
+- hosts: all
+  become: yes
+  vars:
+    repo_url: "https://github.com/fptgang/metroll.git"  # Update if forked
+    app_root: "/opt/metroll"
+    domain_fqdn: "{{ inventory_hostname }}"  # Ans will be IP or FQDN
+    env_file: "{{ app_root }}/.env"
+    docker_compose_plugin_pkg: "docker-compose-plugin"
+  tasks:
+    - name: Update APT cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install prerequisites
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg
+          - lsb-release
+        state: present
+
+    - name: Add Docker GPG key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Add Docker repository
+      apt_repository:
+        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+        state: present
+        filename: docker
+
+    - name: Install Docker Engine and Compose plugin
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - "{{ docker_compose_plugin_pkg }}"
+        state: latest
+
+    - name: Add {{ ansible_user }} to docker group
+      user:
+        name: "{{ ansible_user }}"
+        groups: docker
+        append: yes
+
+    - name: Enable & start Docker service
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Ensure app root directory exists
+      file:
+        path: "{{ app_root }}"
+        state: directory
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+
+    - name: Add OpenJDK PPA for JDK 21
+      apt_repository:
+        repo: ppa:openjdk-r/ppa
+        state: present
+        update_cache: yes
+
+    - name: Install build dependencies (git, OpenJDK)
+      apt:
+        name:
+          - git
+          - openjdk-21-jdk
+        state: present
+        update_cache: yes
+
+    - name: Pull Metroll repository
+      git:
+        repo: "{{ repo_url }}"
+        dest: "{{ app_root }}"
+        version: "feature/vi_order-api"
+        update: yes
+        force: yes
+
+    - name: Check if local .env exists
+      local_action:
+        module: stat
+        path: "{{ playbook_dir }}/../../.env"
+      register: local_env_file
+      become: no
+
+    - name: Copy .env from local project (if exists)
+      copy:
+        src: "{{ playbook_dir }}/../../.env"
+        dest: "{{ env_file }}"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: '0644'
+      when: local_env_file.stat.exists
+
+    - name: Create default .env file (if local one doesn't exist)
+      copy:
+        dest: "{{ env_file }}"
+        content: |
+          # Auto-generated environment for containerized deployment
+          SPRING_PROFILES_ACTIVE=production
+          
+          # MongoDB connections (using local containers)
+          DATABASE_ACCOUNT_SERVICE=mongodb://mongodb:27017/account?retryWrites=true&w=majority
+          DATABASE_ORDER_SERVICE=mongodb://mongodb:27017/order?retryWrites=true&w=majority
+          DATABASE_SUBWAY_SERVICE=mongodb://mongodb:27017/subway?retryWrites=true&w=majority
+          DATABASE_TICKET_SERVICE=mongodb://mongodb:27017/ticket?retryWrites=true&w=majority
+          
+          # RabbitMQ connection (using local container)
+          CLOUDAMQP_HOST=rabbitmq
+          CLOUDAMQP_PORT=5672
+          CLOUDAMQP_USERNAME=guest
+          CLOUDAMQP_PASSWORD=guest
+          CLOUDAMQP_VHOST=/
+          
+          # Placeholder secrets (replace with real values for production)
+          HCP_CLIENT_ID=placeholder
+          HCP_CLIENT_SECRET=placeholder
+          HCP_SECRET_URL_FIREBASE=placeholder
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: '0644'
+      when: not local_env_file.stat.exists
+
+    - name: Ensure gradlew is executable
+      file:
+        path: "{{ app_root }}/gradlew"
+        mode: '0755'
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        state: file
+
+    - name: Build project JARs
+      args:
+        chdir: "{{ app_root }}"
+      shell: ./gradlew clean bootJar
+
+    - name: Deploy docker-compose.yml with MongoDB and RabbitMQ
+      template:
+        src: docker-compose.yml.j2
+        dest: "{{ app_root }}/docker-compose.yml"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: '0644'
+
+    - name: Build Docker images
+      args:
+        chdir: "{{ app_root }}"
+      shell: docker compose build
+
+    - name: Start containers
+      args:
+        chdir: "{{ app_root }}"
+      shell: docker compose up -d
+        
+    - name: Wait for services to be healthy
+      uri:
+        url: "http://localhost:8080/actuator/health"
+        method: GET
+        status_code: 200
+      register: health_check
+      until: health_check.status == 200
+      retries: 30
+      delay: 10
+      ignore_errors: yes
+
+    - name: Install Nginx and certbot
+      apt:
+        name:
+          - nginx
+          - certbot
+          - python3-certbot-nginx
+        state: present
+
+    - name: Stop Nginx for initial certificate generation
+      service:
+        name: nginx
+        state: stopped
+
+    - name: Obtain SSL certificate
+      shell: |
+        certbot certonly --standalone --non-interactive --agree-tos -m admin@{{ domain_fqdn }} -d {{ domain_fqdn }} --keep-until-expiring
+      register: certbot_result
+      args:
+        creates: "/etc/letsencrypt/live/{{ domain_fqdn }}/fullchain.pem"
+
+    - name: Deploy Nginx configuration
+      template:
+        src: nginx.conf.j2
+        dest: /etc/nginx/sites-available/metroll
+        owner: root
+        group: root
+        mode: '0644'
+      notify: restart nginx
+
+    - name: Enable Nginx site
+      file:
+        src: /etc/nginx/sites-available/metroll
+        dest: /etc/nginx/sites-enabled/metroll
+        state: link
+      notify: restart nginx
+
+    - name: Remove default Nginx site
+      file:
+        path: /etc/nginx/sites-enabled/default
+        state: absent
+      notify: restart nginx
+
+    - name: Start and enable Nginx
+      service:
+        name: nginx
+        state: started
+        enabled: yes
+
+    - name: Print certificate info
+      debug:
+        var: certbot_result.stdout
+
+    - name: Final deployment status
+      debug:
+        msg: |
+          ========================================
+          Metroll Deployment Complete!
+          ========================================
+          
+          🌐 Public Access URLs (HTTPS):
+          - Swagger UI: https://{{ domain_fqdn }}/webjars/swagger-ui/index.html
+          - Health Check: https://{{ domain_fqdn }}/health
+          - API Base: https://{{ domain_fqdn }}/
+          
+          🔧 Development URLs (Direct):
+          - RabbitMQ Management: http://{{ domain_fqdn }}:15672 (guest/guest)
+          - API Gateway Direct: http://{{ domain_fqdn }}:8080 (internal)
+          
+          🔒 SSL Certificate: /etc/letsencrypt/live/{{ domain_fqdn }}/fullchain.pem
+          📝 Nginx Config: /etc/nginx/sites-available/metroll
+          
+          🚀 Commands:
+          - Check services: ssh {{ ansible_user }}@{{ domain_fqdn }} 'cd /opt/metroll && docker compose ps'
+          - Check Nginx: ssh {{ ansible_user }}@{{ domain_fqdn }} 'sudo nginx -t && sudo systemctl status nginx'
+          - View logs: ssh {{ ansible_user }}@{{ domain_fqdn }} 'sudo tail -f /var/log/nginx/metroll_*.log'
+
+  handlers:
+    - name: restart nginx
+      service:
+        name: nginx
+        state: restarted 

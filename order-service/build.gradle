@@ -1,3 +1,4 @@
 dependencies {
+    implementation 'vn.payos:payos-java:1.0.3'
 
 }
