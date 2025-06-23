@@ -4,28 +4,28 @@ import com.fpt.metroll.shared.domain.dto.PageDto;
 import com.fpt.metroll.shared.domain.dto.PageableDto;
 import com.fpt.metroll.shared.domain.dto.subway.StationDto;
 import com.fpt.metroll.shared.domain.dto.subway.StationQueryParam;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 
 @FeignClient(name = "subway-service")
 public interface SubwayClient {
 
-    @PostMapping("/stations/v1/list")
+    @GetMapping("/stations")
     PageDto<StationDto> listStations(
-            @RequestBody StationQueryParam queryParam,
+            @ParameterObject StationQueryParam queryParam,
             PageableDto pageable);
 
-    @GetMapping("/stations/v1/{code}")
+    @GetMapping("/stations/{code}")
     StationDto getStationByCode(@PathVariable("code") String stationCode);
 
-    @PostMapping("/lines/v1/list")
+    @GetMapping("/lines")
     PageDto<StationDto> listLines(
-            @RequestBody StationQueryParam queryParam,
+            @ParameterObject StationQueryParam queryParam,
             PageableDto pageable);
 
-    @GetMapping("/lines/v1/{code}")
+    @GetMapping("/lines/{code}")
     StationDto getLineByCode(@PathVariable("code") String lineCode);
 }

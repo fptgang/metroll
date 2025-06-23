@@ -121,13 +121,13 @@ spring:
           predicates:
             - Path=/lines/**
           filters:
-            - RewritePath=/lines/(?<path>.*), /lines/v1/$\{path}
+            - RewritePath=/lines/(?<path>.*), /$\{path}
         - id: subway-service-stations
           uri: lb://subway-service
           predicates:
             - Path=/stations/**
           filters:
-            - RewritePath=/stations/(?<path>.*), /stations/v1/$\{path}
+            - RewritePath=/stations/(?<path>.*), /$\{path}
         - id: subway-service-legacy
           uri: lb://subway-service
           predicates:

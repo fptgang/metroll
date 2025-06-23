@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("stations/v1")
+@RequestMapping("/stations")
 public class StationController {
 
     private StationService stationService;
@@ -37,10 +37,10 @@ public class StationController {
         return ResponseEntity.ok(stationService.save(stationDto));
     }
 
-    @PostMapping("/list")
+    @GetMapping
     @Operation(summary = "List stations with query parameters")
     public ResponseEntity<PageDto<StationDto>> listStations(
-            @RequestBody StationQueryParam queryParam,
+            @ParameterObject StationQueryParam queryParam,
             @ParameterObject PageableDto pageable
     ) {
         return ResponseEntity.ok(stationService.findAll(queryParam, pageable));
