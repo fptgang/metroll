@@ -20,6 +20,7 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.UserRecord;
 import com.google.firebase.auth.FirebaseAuthException;
 
+import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -98,6 +99,7 @@ public class AccountServiceImpl implements AccountService {
             Account account = accountMapper.toDocument(request);
             account.setId(userRecord.getUid());
             account.setActive(true);
+            account.setCreatedAt(Instant.now());
             account = accountRepository.save(account);
 
             return accountMapper.toDto(account);
@@ -114,6 +116,7 @@ public class AccountServiceImpl implements AccountService {
         Account account = accountMapper.toDocument(request);
         account.setId(id);
         account.setActive(true);
+        account.setCreatedAt(Instant.now());
         account = accountRepository.save(account);
         return accountMapper.toDto(account);
     }

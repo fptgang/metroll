@@ -113,7 +113,7 @@ public class VoucherServiceImpl implements VoucherService {
 
     @Override
     public List<VoucherDto> create(VoucherCreateRequest request) {
-        if (!SecurityUtil.hasRole(AccountRole.STAFF))
+        if (!SecurityUtil.hasRole(AccountRole.STAFF, AccountRole.ADMIN))
             throw new NoPermissionException();
 
         validateVoucherAmounts(request.getDiscountAmount(), request.getMinTransactionAmount());
@@ -144,7 +144,7 @@ public class VoucherServiceImpl implements VoucherService {
 
     @Override
     public VoucherDto update(String id, VoucherUpdateRequest request) {
-        if (!SecurityUtil.hasRole(AccountRole.STAFF))
+        if (!SecurityUtil.hasRole(AccountRole.STAFF,AccountRole.ADMIN))
             throw new NoPermissionException();
 
         validateVoucherAmounts(request.getDiscountAmount(), request.getMinTransactionAmount());
@@ -175,7 +175,7 @@ public class VoucherServiceImpl implements VoucherService {
 
     @Override
     public void revoke(String id) {
-        if (!SecurityUtil.hasRole(AccountRole.STAFF))
+        if (!SecurityUtil.hasRole(AccountRole.STAFF,AccountRole.ADMIN))
             throw new NoPermissionException();
 
         Voucher voucher = voucherRepository.findById(id)

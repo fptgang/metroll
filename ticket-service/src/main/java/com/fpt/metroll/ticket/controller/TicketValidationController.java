@@ -19,7 +19,7 @@ import java.util.List;
 
 @Slf4j
 @RestController
-@RequestMapping("/ticket-validations/")
+@RequestMapping("/ticket-validations")
 @Tag(name = "Ticket Validation", description = "Ticket Validation API")
 @SecurityRequirement(name = "bearerAuth")
 public class TicketValidationController {

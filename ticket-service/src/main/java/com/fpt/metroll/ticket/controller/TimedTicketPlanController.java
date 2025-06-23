@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.*;
 
 @Slf4j
 @RestController
-@RequestMapping("/timed-ticket-plans/")
+@RequestMapping("/timed-ticket-plans")
 @Tag(name = "Timed Ticket Plan", description = "Timed Ticket Plan API")
 @SecurityRequirement(name = "bearerAuth")
 public class TimedTicketPlanController {

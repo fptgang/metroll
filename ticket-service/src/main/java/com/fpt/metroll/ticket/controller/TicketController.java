@@ -20,7 +20,7 @@ import java.util.List;
 
 @Slf4j
 @RestController
-@RequestMapping("/")
+@RequestMapping("/tickets")
 @Tag(name = "Ticket", description = "Ticket API")
 @SecurityRequirement(name = "bearerAuth")
 public class TicketController {
