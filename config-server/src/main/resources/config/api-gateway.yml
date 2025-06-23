@@ -32,8 +32,6 @@ spring:
           uri: lb://account-service
           predicates:
             - Path=/accounts/**
-          filters:
-            - RewritePath=/accounts/(?<path>.*), /accounts/$\{path}
         - id: subway-service
           uri: lb://subway-service
           predicates:

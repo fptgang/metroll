@@ -15,6 +15,9 @@ spring:
       ssl: {enabled: true}
       auto-index-creation: true
 
+  main:
+    allow-bean-definition-overriding: true
+
   rabbitmq:
     host: ${CLOUDAMQP_HOST}
     port: ${CLOUDAMQP_PORT}

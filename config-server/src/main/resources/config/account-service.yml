@@ -45,6 +45,9 @@ spring:
     ssl:
       enabled: true
 
+  main:
+    allow-bean-definition-overriding: true
+
 server:
   forward-headers-strategy: framework
 
