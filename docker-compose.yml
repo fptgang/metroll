@@ -109,17 +109,17 @@ services:
     env_file:
       - .env
 #    p95 75rps 2.6s
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 768M
-    command:
-      - -Xmx512m
-      - -XX:+UseG1GC
-      - -XX:InitiatingHeapOccupancyPercent=30
-      - -jar
-      - app.jar
+#    deploy:
+#      resources:
+#        limits:
+#          cpus: '0.5'
+#          memory: 768M
+#    command:
+#      - -Xmx512m
+#      - -XX:+UseG1GC
+#      - -XX:InitiatingHeapOccupancyPercent=30
+#      - -jar
+#      - app.jar
     depends_on:
       config-server:
         condition: service_healthy
