@@ -21,7 +21,7 @@ public interface SubwayClient {
     @GetMapping("/stations/{code}")
     StationDto getStationByCode(@PathVariable("code") String stationCode);
 
-    @PostMapping("/subway/lines")
+    @GetMapping("/lines")
     PageDto<StationDto> listLines(
             @ParameterObject StationQueryParam queryParam,
             PageableDto pageable);
