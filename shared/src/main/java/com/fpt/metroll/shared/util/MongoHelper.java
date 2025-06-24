@@ -5,11 +5,13 @@ import org.springframework.data.domain.*;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Component;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 
 import java.util.List;
 import java.util.function.Function;
 
 @Component
+@ConditionalOnClass(name = "org.springframework.data.mongodb.core.MongoTemplate")
 public class MongoHelper {
 
     private final MongoTemplate mongoTemplate;

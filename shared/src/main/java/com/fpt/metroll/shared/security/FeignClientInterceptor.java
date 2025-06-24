@@ -29,7 +29,7 @@ public class FeignClientInterceptor implements RequestInterceptor {
             template.header("X-User-Role", role);
         }
         if (email != null) {
-            template.header("X-User-Email", role);
+            template.header("X-User-Email", email);
         }
     }
 }

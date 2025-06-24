@@ -19,5 +19,6 @@ public interface OrderMapper {
     
     Order toEntity(OrderDto orderDto);
     
+    @Mapping(target = "order", ignore = true)
     OrderDetail toDetailEntity(OrderDetailDto orderDetailDto);
 } 

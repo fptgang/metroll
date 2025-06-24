@@ -1,4 +1,11 @@
 dependencies {
     implementation 'vn.payos:payos-java:1.0.3'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.postgresql:postgresql'
+}
 
+// Exclude MongoDB since we're using PostgreSQL
+configurations.all {
+    exclude group: 'org.springframework.boot', module: 'spring-boot-starter-data-mongodb'
+    exclude group: 'org.mongodb', module: 'mongodb-driver-sync'
 }

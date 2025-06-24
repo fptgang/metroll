@@ -5,7 +5,7 @@ import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
-@FeignClient(name = "account-service", contextId = "accountClient")
+@FeignClient(name = "account-service", contextId = "accountClient", configuration = com.fpt.metroll.shared.config.FeignClientConfiguration.class)
 public interface AccountClient {
 
     @GetMapping("/account/accounts/{accountId}")

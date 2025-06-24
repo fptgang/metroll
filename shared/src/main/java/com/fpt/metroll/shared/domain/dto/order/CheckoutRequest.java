@@ -2,11 +2,15 @@ package com.fpt.metroll.shared.domain.dto.order;
 
 import lombok.Builder;
 import lombok.Data;
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
 
 import java.util.List;
 
 @Builder
 @Data
+@AllArgsConstructor
+@NoArgsConstructor
 public class CheckoutRequest {
     private List<CheckoutItemRequest> items;
     private String paymentMethod; // CASH|VNPAY|PAYOS
