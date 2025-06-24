@@ -1,24 +1,7 @@
-###############################
-# Stage 1 – build the module  #
-###############################
-FROM eclipse-temurin:21-jdk-jammy AS builder
-WORKDIR /workspace
-
-# Caching layers
-COPY gradlew settings.gradle build.gradle ./
-COPY gradle gradle
-
-COPY . .
-
-# Build jar
-RUN ./gradlew --no-daemon :service-registry:bootJar -x test
-
-###############################
-# Stage 2 – runtime           #
-###############################
 FROM eclipse-temurin:21-jdk-jammy
 WORKDIR /app
 
-COPY --from=builder /workspace/service-registry/build/libs/*SNAPSHOT.jar app.jar
+# Copy the pre-built jar from local build directory
+COPY service-registry/build/libs/*SNAPSHOT.jar app.jar
 
 ENTRYPOINT ["java", "-Xmx1G", "-jar", "app.jar"]
