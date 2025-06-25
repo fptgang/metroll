@@ -53,7 +53,7 @@ public class TicketController {
 
     @Operation(summary = "Get tickets by order detail ID")
     @GetMapping("/order-detail/{orderDetailId}")
-    public ResponseEntity<List<TicketDto>> getTicketsByOrderDetailId(
+    public ResponseEntity<TicketDto> getTicketsByOrderDetailId(
             @PathVariable("orderDetailId") String orderDetailId) {
         return ResponseEntity.ok(ticketService.findByOrderDetailId(orderDetailId));
     }
@@ -84,7 +84,7 @@ public class TicketController {
         return ResponseEntity.ok(ticketService.createTickets(ticketRequests));
     }
 
-    @Operation(summary = "Generate QR code base64")
+    @Operation(summary = "Generate QR code base64 ")
     @GetMapping("/{id}/qrcode")
     public ResponseEntity<String> generateQRCodeBase64(@PathVariable("id") String id) throws Exception {
         return ResponseEntity.ok(ticketService.generateQRCodeBase64(id));

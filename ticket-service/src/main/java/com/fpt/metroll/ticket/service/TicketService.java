@@ -20,7 +20,7 @@ public interface TicketService {
 
     TicketDto requireByTicketNumber(String ticketNumber);
 
-    List<TicketDto> findByOrderDetailId(String orderDetailId);
+    TicketDto findByOrderDetailId(String orderDetailId);
 
     List<TicketDto> findByStatus(TicketStatus status);
 
