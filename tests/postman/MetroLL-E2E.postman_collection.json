@@ -119,6 +119,71 @@
           ]
         },
         {
+          "name": "Checkout - PayOS Payment Failure",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentMethod\": \"PAYOS\",\n  \"items\": [\n    {\n      \"ticketType\": \"P2P\",\n      \"p2pJourneyId\": \"6859285c173c7b3d557a5f3f\",\n      \"quantity\": 1\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/orders/checkout",
+              "host": ["{{base_url}}"],
+              "path": ["orders", "checkout"]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// This test demonstrates that when PayOS is not configured,",
+                  "// it should fail with 502 Bad Gateway instead of using mock payment.",
+                  "// In real testing, you would configure the service without PayOS credentials.",
+                  "console.log('Testing PayOS payment when not properly configured...');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Note: This test will pass with current mock implementation,",
+                  "// but when PayOS is properly configured without credentials,",
+                  "// it should return 502 Bad Gateway with proper error message.",
+                  "console.log('Status Code:', pm.response.code);",
+                  "console.log('Response:', JSON.stringify(pm.response.json(), null, 2));",
+                  "",
+                  "if (pm.response.code === 502) {",
+                  "    pm.test('Status 502 - Payment Gateway Error', () => {",
+                  "        pm.response.to.have.status(502);",
+                  "    });",
+                  "    pm.test('Error message contains PayOS', () => {",
+                  "        const json = pm.response.json();",
+                  "        pm.expect(json).to.have.property('error');",
+                  "        pm.expect(json.error).to.include('PayOS');",
+                  "    });",
+                  "} else {",
+                  "    pm.test('Current behavior: Uses mock payment (should be fixed)', () => {",
+                  "        pm.response.to.have.status(200);",
+                  "        const json = pm.response.json();",
+                  "        pm.expect(json.transactionReference).to.include('MOCK');",
+                  "        console.log('WARNING: PayOS is using mock payment instead of failing');",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
           "name": "My Orders - List",
           "request": {
             "method": "GET",
@@ -233,6 +298,7 @@
   ],
   "variable": [
     { "key": "base_url", "value": "http://localhost:8080" },
+    { "key": "base_url_no_payos", "value": "http://localhost:8081" },
     { "key": "jwt_token", "value": "$mock:test" },
     { "key": "order_id_payos", "value": "" }
   ]

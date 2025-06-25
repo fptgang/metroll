@@ -285,10 +285,13 @@ public class OrderServiceImpl implements OrderService {
             payOSService.createPaymentLink(order);
             log.info("PayOS payment link created for order {}", order.getId());
         } catch (Exception e) {
-            log.error("Failed to create PayOS payment link for order {}", order.getId(), e);
+            log.error("Failed to create PayOS payment link for order {}: {}", order.getId(), e.getMessage(), e);
             // Set order to FAILED if PayOS payment link creation fails
             order.setStatus(OrderStatus.FAILED);
             orderRepository.save(order);
+            
+            // Re-throw the exception to propagate to the API response
+            throw e;
         }
     }
 

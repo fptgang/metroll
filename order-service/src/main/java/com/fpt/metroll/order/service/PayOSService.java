@@ -3,6 +3,7 @@ package com.fpt.metroll.order.service;
 import com.fpt.metroll.order.document.Order;
 import vn.payos.type.CheckoutResponseData;
 import vn.payos.type.PaymentLinkData;
+import vn.payos.type.Webhook;
 import vn.payos.type.WebhookData;
 
 public interface PayOSService {
@@ -23,12 +24,12 @@ public interface PayOSService {
     PaymentLinkData cancelPaymentLink(Long orderCode, String reason);
     
     /**
-     * Verify webhook data
+     * Confirm webhook URL with PayOS
      */
-    WebhookData verifyWebhookData(String webhookBody);
+    String confirmWebhook(String webhookUrl);
     
     /**
      * Process payment completion
      */
-    void processPaymentCompletion(WebhookData webhookData);
+    void processPaymentCompletion(Webhook webhookData);
 } 

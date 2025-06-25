@@ -16,7 +16,7 @@ import java.util.List;
 @FeignClient(name = "ticket-service", configuration = com.fpt.metroll.shared.config.FeignClientConfiguration.class, fallbackFactory = TicketClient.TicketClientFallbackFactory.class)
 public interface TicketClient {
 
-    @PostMapping("/ticket/")
+    @PostMapping("/tickets")
     TicketDto createTicket(TicketUpsertRequest ticketUpsertRequest);
     
     @GetMapping("/p2p-journeys/{id}")
@@ -25,7 +25,7 @@ public interface TicketClient {
     @GetMapping("/timed-ticket-plans/{id}")
     TimedTicketPlanDto getTimedTicketPlanById(@PathVariable("id") String id);
     
-    @PostMapping("/ticket/batch")
+    @PostMapping("/tickets/batch")
     List<TicketDto> createTickets(List<TicketUpsertRequest> ticketRequests);
 
     /**

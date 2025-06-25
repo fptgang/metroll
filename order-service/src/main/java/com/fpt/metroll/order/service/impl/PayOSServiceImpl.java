@@ -8,6 +8,7 @@ import com.fpt.metroll.order.repository.OrderRepository;
 import com.fpt.metroll.order.service.PayOSService;
 import com.fpt.metroll.shared.domain.enums.OrderStatus;
 import com.fpt.metroll.shared.domain.enums.TicketType;
+import com.fpt.metroll.shared.exception.PaymentProcessingException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -38,25 +39,32 @@ public class PayOSServiceImpl implements PayOSService {
     
     @Override
     public CheckoutResponseData createPaymentLink(Order order) {
+        // Validate PayOS configuration
         if (payOS == null) {
-            log.warn("PayOS not configured, skipping payment link creation for order {}", order.getId());
-            return createMockPaymentResponse(order);
+            log.error("PayOS not configured. Cannot process payment for order {}", order.getId());
+            throw new PaymentProcessingException("PayOS payment gateway is not configured. Please contact administrator.");
         }
         
         try {
             // Convert order to PayOS format
-            Long orderCode = Long.parseLong(order.getId().replace("-", "").substring(0, 12));
+            Long orderCode = generateOrderCode(order.getId());
             
             // Create items from order details
             List<ItemData> items = order.getOrderDetails().stream()
                     .map(this::convertOrderDetailToItem)
                     .collect(Collectors.toList());
             
+            // Ensure amount is in cents/smallest currency unit and at least 1 cent
+            int amount = Math.max(1, order.getFinalTotal().multiply(java.math.BigDecimal.valueOf(100)).intValue());
+            
+            // Ensure description is within 25 character limit
+            String description = "Metro #" + order.getId().substring(0, Math.min(8, order.getId().length()));
+            
             // Build payment data
             PaymentData paymentData = PaymentData.builder()
                     .orderCode(orderCode)
-                    .amount(order.getFinalTotal().intValue())
-                    .description("Thanh toán đơn hàng Metro #" + order.getId())
+                    .amount(amount)
+                    .description(description)
                     .items(items)
                     .returnUrl(payOSConfig.getWebhookUrl() + "/success?orderId=" + order.getId())
                     .cancelUrl(payOSConfig.getWebhookUrl() + "/cancel?orderId=" + order.getId())
@@ -75,68 +83,65 @@ public class PayOSServiceImpl implements PayOSService {
             return response;
             
         } catch (Exception e) {
-            log.error("Failed to create PayOS payment link for order {}", order.getId(), e);
+            log.error("Failed to create PayOS payment link for order {}: {}", order.getId(), e.getMessage(), e);
             
-            // Update order with mock payment info
-            order.setTransactionReference("MOCK-" + System.currentTimeMillis());
-            order.setPaymentMethod("PAYOS");
-            order.setPaymentUrl("http://localhost:8080/mock-payment/" + order.getId());
-            order.setQrCode("mock-qr-code");
+            // Update order status to FAILED
+            order.setStatus(OrderStatus.FAILED);
             orderRepository.save(order);
             
-            return createMockPaymentResponse(order);
+            // Throw specific payment processing exception with PayOS identifier
+            throw new PaymentProcessingException("Failed to create PayOS payment link: " + e.getMessage(), e);
         }
     }
     
     @Override
     public PaymentLinkData getPaymentLinkInfo(Long orderCode) {
         if (payOS == null) {
-            log.warn("PayOS not configured");
-            return null;
+            throw new PaymentProcessingException("PayOS not configured");
         }
         
         try {
             return payOS.getPaymentLinkInformation(orderCode);
         } catch (Exception e) {
-            log.error("Failed to get payment link info for order code {}", orderCode, e);
-            return null;
+            log.error("Failed to get payment link info for order code {}: {}", orderCode, e.getMessage(), e);
+            throw new PaymentProcessingException("Failed to get payment link information: " + e.getMessage(), e);
         }
     }
     
     @Override
     public PaymentLinkData cancelPaymentLink(Long orderCode, String reason) {
         if (payOS == null) {
-            log.warn("PayOS not configured");
-            return null;
+            throw new PaymentProcessingException("PayOS not configured");
         }
         
         try {
             return payOS.cancelPaymentLink(orderCode, reason);
         } catch (Exception e) {
-            log.error("Failed to cancel payment link for order code {}", orderCode, e);
-            return null;
+            log.error("Failed to cancel payment link for order code {}: {}", orderCode, e.getMessage(), e);
+            throw new PaymentProcessingException("Failed to cancel payment link: " + e.getMessage(), e);
         }
     }
     
     @Override
-    public WebhookData verifyWebhookData(String webhookBody) {
-        if (payOS == null) {
-            log.warn("PayOS not configured");
-            return null;
-        }
-        
+    public String confirmWebhook(String webhookUrl) {
         try {
-            Webhook webhook = objectMapper.readValue(webhookBody, Webhook.class);
-            return payOS.verifyPaymentWebhookData(webhook);
+            log.info("Confirming PayOS webhook URL: {}", webhookUrl);
+            var webHookConfirmed = payOS.confirmWebhook(webhookUrl);
+            log.info("PayOS webhook confirmed successfully for URL: {}", webhookUrl);
+            return webHookConfirmed;
         } catch (Exception e) {
-            log.error("Failed to verify webhook data", e);
-            return null;
+            e.printStackTrace();
+            log.error("Failed to confirm PayOS webhook: {}", e.getMessage());
+            throw new PaymentProcessingException("Failed to confirm webhook: " + e.getMessage());
         }
     }
     
     @Override
-    public void processPaymentCompletion(WebhookData webhookData) {
+    public void processPaymentCompletion(Webhook webhook) {
         try {
+
+            var webhookData = payOS.verifyPaymentWebhookData(webhook);
+
             // Extract order ID from transaction reference
             String transactionRef = "PAYOS-" + webhookData.getOrderCode();
             Order order = orderRepository.findByTransactionReference(transactionRef)
@@ -144,7 +149,7 @@ public class PayOSServiceImpl implements PayOSService {
             
             if (order == null) {
                 log.error("Order not found for transaction reference: {}", transactionRef);
-                return;
+                throw new PaymentProcessingException("Order not found for transaction reference: " + transactionRef);
             }
             
             // Update order status based on webhook data
@@ -163,17 +168,36 @@ public class PayOSServiceImpl implements PayOSService {
             orderRepository.save(order);
             
         } catch (Exception e) {
-            log.error("Failed to process payment completion", e);
+            log.error("Failed to process payment completion: {}", e.getMessage(), e);
+            throw new PaymentProcessingException("Failed to process payment completion: " + e.getMessage(), e);
+        }
+    }
+    
+    private Long generateOrderCode(String orderId) {
+        try {
+            // Convert UUID to numeric order code by taking the first 12 digits
+            String numericString = orderId.replace("-", "").replaceAll("[^0-9]", "");
+            if (numericString.length() < 12) {
+                // Pad with zeros if needed
+                numericString = String.format("%-12s", numericString).replace(' ', '0');
+            }
+            return Long.parseLong(numericString.substring(0, 12));
+        } catch (NumberFormatException e) {
+            // Fallback: use timestamp + random number
+            return System.currentTimeMillis() % 1000000000000L;
         }
     }
     
     private ItemData convertOrderDetailToItem(OrderDetail detail) {
         String itemName = buildItemName(detail);
         
+        // Ensure price is in cents/smallest currency unit and at least 1 cent
+        int priceInCents = Math.max(1, detail.getUnitPrice().multiply(java.math.BigDecimal.valueOf(100)).intValue());
+        
         return ItemData.builder()
                 .name(itemName)
                 .quantity(detail.getQuantity())
-                .price(detail.getUnitPrice().intValue())
+                .price(priceInCents)
                 .build();
     }
     
@@ -184,13 +208,5 @@ public class PayOSServiceImpl implements PayOSService {
             return String.format("Vé Thời gian - %s", detail.getTimedTicketPlan());
         }
         return "Vé Metro";
-    }
-    
-    private CheckoutResponseData createMockPaymentResponse(Order order) {
-        // Create a mock response when PayOS is not configured
-        // Since CheckoutResponseData doesn't have a public constructor or builder,
-        // we'll return null and handle it in the calling code
-        log.info("PayOS not configured, returning mock response for order {}", order.getId());
-        return null;
     }
 } 

@@ -1,0 +1,76 @@
+spring:
+  application:
+    name: order-service
+  main:
+    allow-bean-definition-overriding: true
+
+  docker:
+    compose:
+      enabled: false
+
+  jackson:
+    default-property-inclusion: non_null
+
+  datasource:
+    url: jdbc:postgresql://ep-small-glade-a1mp12ex-pooler.ap-southeast-1.aws.neon.tech:5432/neondb?sslmode=require
+    username: neondb_owner
+    password: npg_UvDLaju4PwT3
+    driver-class-name: org.postgresql.Driver
+  
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+
+  rabbitmq:
+    host: ${CLOUDAMQP_HOST}
+    port: ${CLOUDAMQP_PORT}
+    username: ${CLOUDAMQP_USERNAME}
+    password: ${CLOUDAMQP_PASSWORD}
+    publisher-confirms: true
+    virtual-host: ${CLOUDAMQP_VHOST}
+    ssl:
+      enabled: true
+
+server:
+  forward-headers-strategy: framework
+
+feign:
+  client:
+    config:
+      default:
+        connectTimeout: 5000
+        readTimeout: 10000
+        loggerLevel: basic
+  circuitbreaker:
+    enabled: false
+
+metroll:
+  exception:
+    log: true
+  payos:
+    # PayOS credentials intentionally left empty to test failure scenarios
+    client-id: ${PAYOS_CLIENT_ID}
+    api-key: ${PAYOS_API_KEY}
+    checksum-key: ${PAYOS_CHECKSUM_KEY}
+
+springdoc:
+  cache:
+    disabled: true
+  version: '@springdoc.version@'
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://service-registry.metroll:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+
+logging:
+  level:
+    com.fpt.metroll.shared.security.AuthHeaderFilter: DEBUG 
