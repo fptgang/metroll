@@ -42,6 +42,8 @@ public class RestExceptionHandler extends ResponseEntityExceptionHandler {
             status = HttpStatus.BAD_REQUEST;
         } else if (ex instanceof NoPermissionException) {
             status = HttpStatus.FORBIDDEN;
+        } else if (ex instanceof PaymentProcessingException) {
+            status = HttpStatus.BAD_GATEWAY;
         } else if (ex instanceof FeignException) {
             // Handle Feign exceptions to preserve original status code
             FeignException feignEx = (FeignException) ex;

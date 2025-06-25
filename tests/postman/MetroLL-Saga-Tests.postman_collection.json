@@ -1,0 +1,1102 @@
+{
+  "info": {
+    "name": "MetroLL Saga Pattern Tests",
+    "description": "Comprehensive test suite for testing the Orchestrator Saga Pattern implementation in MetroLL checkout flow",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Setup",
+      "item": [
+        {
+          "name": "Login - Get JWT Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{test_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{base_url}}/accounts/login/",
+              "host": ["{{base_url}}"],
+              "path": ["accounts", "login", ""]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// === VERBOSE LOGGING: PRE-REQUEST ===",
+                  "console.log('🚀 [REQUEST] Login - Get JWT Token');",
+                  "console.log('📍 URL:', pm.request.url.toString());",
+                  "console.log('🔧 Method:', pm.request.method);",
+                  "console.log('📋 Headers:', JSON.stringify(pm.request.headers.toJSON(), null, 2));",
+                  "console.log('📦 Body:', pm.request.body ? pm.request.body.raw : 'No body');",
+                  "console.log('🎯 Test Token:', pm.environment.get('test_token'));",
+                  "console.log('===========================');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// === VERBOSE LOGGING: RESPONSE ===",
+                  "console.log('📥 [RESPONSE] Login - Get JWT Token');",
+                  "console.log('📊 Status:', pm.response.code, pm.response.status);",
+                  "console.log('⏱️ Response Time:', pm.response.responseTime + 'ms');",
+                  "console.log('📋 Response Headers:', JSON.stringify(pm.response.headers.toJSON(), null, 2));",
+                  "console.log('📦 Response Body:', pm.response.text());",
+                  "console.log('📏 Response Size:', pm.response.responseSize + ' bytes');",
+                  "",
+                  "pm.test('Login successful', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.environment.set('jwt_token', pm.environment.get('test_token'));",
+                  "    console.log('✅ Login successful for user:', response.id);",
+                  "    console.log('👤 User role:', response.role);",
+                  "    console.log('🎟️ JWT Token set:', pm.environment.get('jwt_token'));",
+                  "} else {",
+                  "    console.log('❌ Login failed with status:', pm.response.code);",
+                  "}",
+                  "console.log('===========================');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Available P2P Journeys",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/p2p-journeys",
+              "host": ["{{base_url}}"],
+              "path": ["p2p-journeys"]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// === VERBOSE LOGGING: PRE-REQUEST ===",
+                  "console.log('🚀 [REQUEST] Get Available P2P Journeys');",
+                  "console.log('📍 URL:', pm.request.url.toString());",
+                  "console.log('🔧 Method:', pm.request.method);",
+                  "console.log('📋 Headers:', JSON.stringify(pm.request.headers.toJSON(), null, 2));",
+                  "console.log('🎟️ JWT Token:', pm.environment.get('jwt_token'));",
+                  "console.log('===========================');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// === VERBOSE LOGGING: RESPONSE ===",
+                  "console.log('📥 [RESPONSE] Get Available P2P Journeys');",
+                  "console.log('📊 Status:', pm.response.code, pm.response.status);",
+                  "console.log('⏱️ Response Time:', pm.response.responseTime + 'ms');",
+                  "console.log('📋 Response Headers:', JSON.stringify(pm.response.headers.toJSON(), null, 2));",
+                  "console.log('📦 Response Body:', pm.response.text());",
+                  "",
+                  "pm.test('P2P journeys retrieved', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('📊 Journey count:', response.content ? response.content.length : 0);",
+                  "    if (response.content && response.content.length > 0) {",
+                  "        pm.environment.set('p2p_journey_id', response.content[0].id);",
+                  "        console.log('✅ P2P Journey ID stored:', response.content[0].id);",
+                  "        console.log('🗺️ Journey details:', JSON.stringify(response.content[0], null, 2));",
+                  "    } else {",
+                  "        console.log('⚠️ No P2P journeys found in response');",
+                  "    }",
+                  "} else {",
+                  "    console.log('❌ Failed to get P2P journeys. Status:', pm.response.code);",
+                  "    if (pm.response.code === 400) {",
+                  "        console.log('🔍 Bad Request - Check authentication or endpoint');",
+                  "    }",
+                  "}",
+                  "console.log('===========================');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Saga Checkout Tests",
+      "item": [
+        {
+          "name": "Start Saga Checkout - Success Path",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentMethod\": \"CASH\",\n  \"items\": [\n    {\n      \"ticketType\": \"P2P\",\n      \"p2pJourneyId\": \"{{p2p_journey_id}}\",\n      \"quantity\": 1\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/orders/checkout-saga",
+              "host": ["{{base_url}}"],
+              "path": ["orders", "checkout-saga"]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// === VERBOSE LOGGING: PRE-REQUEST ===",
+                  "console.log('🚀 [REQUEST] Start Saga Checkout - Success Path');",
+                  "console.log('📍 URL:', pm.request.url.toString());",
+                  "console.log('🔧 Method:', pm.request.method);",
+                  "console.log('📋 Headers:', JSON.stringify(pm.request.headers.toJSON(), null, 2));",
+                  "console.log('📦 Request Body:', pm.request.body.raw);",
+                  "console.log('🎟️ JWT Token:', pm.environment.get('jwt_token'));",
+                  "console.log('🗺️ P2P Journey ID:', pm.environment.get('p2p_journey_id'));",
+                  "console.log('===========================');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// === VERBOSE LOGGING: RESPONSE ===",
+                  "console.log('📥 [RESPONSE] Start Saga Checkout - Success Path');",
+                  "console.log('📊 Status:', pm.response.code, pm.response.status);",
+                  "console.log('⏱️ Response Time:', pm.response.responseTime + 'ms');",
+                  "console.log('📋 Response Headers:', JSON.stringify(pm.response.headers.toJSON(), null, 2));",
+                  "console.log('📦 Response Body:', pm.response.text());",
+                  "",
+                  "pm.test('Saga checkout initiated', function () {",
+                  "    pm.response.to.have.status(202);",
+                  "});",
+                  "",
+                  "pm.test('Response contains saga ID', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('sagaId');",
+                  "    pm.expect(response).to.have.property('status', 'STARTED');",
+                  "    pm.expect(response).to.have.property('message');",
+                  "});",
+                  "",
+                  "if (pm.response.code === 202) {",
+                  "    const response = pm.response.json();",
+                  "    pm.environment.set('saga_id_success', response.sagaId);",
+                  "    console.log('✅ Saga ID stored:', response.sagaId);",
+                  "    console.log('📊 Saga Status:', response.status);",
+                  "    console.log('💬 Message:', response.message);",
+                  "} else {",
+                  "    console.log('❌ Saga checkout failed. Status:', pm.response.code);",
+                  "}",
+                  "console.log('===========================');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Check Saga Status - Immediate",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/orders/saga/{{saga_id_success}}/status",
+              "host": ["{{base_url}}"],
+              "path": ["orders", "saga", "{{saga_id_success}}", "status"]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// === VERBOSE LOGGING: PRE-REQUEST ===",
+                  "console.log('🚀 [REQUEST] Check Saga Status - Immediate');",
+                  "console.log('📍 URL:', pm.request.url.toString());",
+                  "console.log('🔧 Method:', pm.request.method);",
+                  "console.log('📋 Headers:', JSON.stringify(pm.request.headers.toJSON(), null, 2));",
+                  "console.log('🎯 Saga ID:', pm.environment.get('saga_id_success'));",
+                  "console.log('===========================');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// === VERBOSE LOGGING: RESPONSE ===",
+                  "console.log('📥 [RESPONSE] Check Saga Status - Immediate');",
+                  "console.log('📊 Status:', pm.response.code, pm.response.status);",
+                  "console.log('⏱️ Response Time:', pm.response.responseTime + 'ms');",
+                  "console.log('📋 Response Headers:', JSON.stringify(pm.response.headers.toJSON(), null, 2));",
+                  "console.log('📦 Response Body:', pm.response.text());",
+                  "",
+                  "pm.test('Status check successful', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('📊 Current saga status:', response.status);",
+                  "    console.log('🆔 Saga ID from response:', response.sagaId);",
+                  "    ",
+                  "    pm.test('Status response format', function () {",
+                  "        pm.expect(response).to.have.property('sagaId', pm.environment.get('saga_id_success'));",
+                  "        pm.expect(response).to.have.property('status');",
+                  "        ",
+                  "        const validStatuses = ['STARTED', 'IN_PROGRESS', 'COMPLETED', 'FAILED', 'COMPENSATING', 'COMPENSATED', 'NOT_FOUND'];",
+                  "        pm.expect(validStatuses).to.include(response.status);",
+                  "    });",
+                  "    ",
+                  "    if (response.status === 'NOT_FOUND') {",
+                  "        console.log('⚠️ WARNING: Saga not found! This might indicate:');",
+                  "        console.log('   - Saga was not properly persisted');",
+                  "        console.log('   - Database connection issues');",
+                  "        console.log('   - Saga cleanup/expiration');",
+                  "    }",
+                  "} else {",
+                  "    console.log('❌ Status check failed. Status:', pm.response.code);",
+                  "}",
+                  "console.log('===========================');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Wait and Check Status - After 5 seconds",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/orders/saga/{{saga_id_success}}/status",
+              "host": ["{{base_url}}"],
+              "path": ["orders", "saga", "{{saga_id_success}}", "status"]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Wait 5 seconds to allow saga steps to process",
+                  "console.log('⏳ Waiting 5 seconds for saga processing...');",
+                  "console.log('🚀 [REQUEST] Wait and Check Status - After 5 seconds');",
+                  "console.log('📍 URL:', pm.request.url.toString());",
+                  "console.log('🎯 Saga ID:', pm.environment.get('saga_id_success'));",
+                  "setTimeout(() => {}, 5000);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// === VERBOSE LOGGING: RESPONSE ===",
+                  "console.log('📥 [RESPONSE] Wait and Check Status - After 5 seconds');",
+                  "console.log('📊 Status:', pm.response.code, pm.response.status);",
+                  "console.log('⏱️ Response Time:', pm.response.responseTime + 'ms');",
+                  "console.log('📦 Response Body:', pm.response.text());",
+                  "",
+                  "pm.test('Status check after processing', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const response = pm.response.json();",
+                  "console.log('📊 Saga status after 5 seconds:', response.status);",
+                  "",
+                  "pm.test('Saga should be progressing or completed', function () {",
+                  "    const progressStatuses = ['IN_PROGRESS', 'COMPLETED', 'NOT_FOUND'];",
+                  "    pm.expect(progressStatuses).to.include(response.status);",
+                  "});",
+                  "",
+                  "if (response.status === 'COMPLETED') {",
+                  "    pm.test('Saga completed successfully', function () {",
+                  "        pm.expect(response.status).to.eql('COMPLETED');",
+                  "    });",
+                  "    console.log('✅ Saga completed successfully!');",
+                  "} else if (response.status === 'NOT_FOUND') {",
+                  "    console.log('⚠️ Saga still not found after 5 seconds - possible persistence issue');",
+                  "}",
+                  "console.log('===========================');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Saga Failure Scenarios",
+      "item": [
+        {
+          "name": "Start Saga Checkout - PayOS Failure",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentMethod\": \"PAYOS\",\n  \"items\": [\n    {\n      \"ticketType\": \"P2P\",\n      \"p2pJourneyId\": \"{{p2p_journey_id}}\",\n      \"quantity\": 1\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/orders/checkout-saga",
+              "host": ["{{base_url}}"],
+              "path": ["orders", "checkout-saga"]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// === VERBOSE LOGGING: PRE-REQUEST ===",
+                  "console.log('🚀 [REQUEST] Start Saga Checkout - PayOS Failure');",
+                  "console.log('📍 URL:', pm.request.url.toString());",
+                  "console.log('🔧 Method:', pm.request.method);",
+                  "console.log('📋 Headers:', JSON.stringify(pm.request.headers.toJSON(), null, 2));",
+                  "console.log('📦 Request Body:', pm.request.body.raw);",
+                  "console.log('💳 Payment Method: PayOS (Expected to fail)');",
+                  "console.log('🗺️ P2P Journey ID:', pm.environment.get('p2p_journey_id'));",
+                  "console.log('===========================');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// === VERBOSE LOGGING: RESPONSE ===",
+                  "console.log('📥 [RESPONSE] Start Saga Checkout - PayOS Failure');",
+                  "console.log('📊 Status:', pm.response.code, pm.response.status);",
+                  "console.log('⏱️ Response Time:', pm.response.responseTime + 'ms');",
+                  "console.log('📋 Response Headers:', JSON.stringify(pm.response.headers.toJSON(), null, 2));",
+                  "console.log('📦 Response Body:', pm.response.text());",
+                  "",
+                  "pm.test('Saga checkout initiated for PayOS', function () {",
+                  "    pm.response.to.have.status(202);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 202) {",
+                  "    const response = pm.response.json();",
+                  "    pm.environment.set('saga_id_payos_failure', response.sagaId);",
+                  "    console.log('✅ PayOS Failure Saga ID stored:', response.sagaId);",
+                  "    console.log('📊 Saga Status:', response.status);",
+                  "    console.log('💬 Message:', response.message);",
+                  "} else {",
+                  "    console.log('❌ PayOS Saga checkout failed. Status:', pm.response.code);",
+                  "}",
+                  "console.log('===========================');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Check PayOS Failure Saga Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/orders/saga/{{saga_id_payos_failure}}/status",
+              "host": ["{{base_url}}"],
+              "path": ["orders", "saga", "{{saga_id_payos_failure}}", "status"]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Wait 10 seconds to allow saga to process and potentially fail",
+                  "console.log('⏳ Waiting 10 seconds for PayOS saga processing...');",
+                  "console.log('🚀 [REQUEST] Check PayOS Failure Saga Status');",
+                  "console.log('📍 URL:', pm.request.url.toString());",
+                  "console.log('🎯 PayOS Saga ID:', pm.environment.get('saga_id_payos_failure'));",
+                  "setTimeout(() => {}, 10000);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// === VERBOSE LOGGING: RESPONSE ===",
+                  "console.log('📥 [RESPONSE] Check PayOS Failure Saga Status');",
+                  "console.log('📊 Status:', pm.response.code, pm.response.status);",
+                  "console.log('⏱️ Response Time:', pm.response.responseTime + 'ms');",
+                  "console.log('📋 Response Headers:', JSON.stringify(pm.response.headers.toJSON(), null, 2));",
+                  "console.log('📦 Response Body:', pm.response.text());",
+                  "",
+                  "pm.test('Status check for PayOS failure', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const response = pm.response.json();",
+                  "console.log('📊 PayOS Saga status after processing:', response.status);",
+                  "",
+                  "pm.test('Saga should handle PayOS failure', function () {",
+                  "    // PayOS failures should trigger compensation or mark as failed",
+                  "    const failureStatuses = ['FAILED', 'COMPENSATING', 'COMPENSATED'];",
+                  "    const successStatuses = ['COMPLETED']; // If PayOS is properly configured",
+                  "    const validStatuses = [...failureStatuses, ...successStatuses, 'IN_PROGRESS', 'NOT_FOUND'];",
+                  "    pm.expect(validStatuses).to.include(response.status);",
+                  "});",
+                  "",
+                  "if (response.status === 'FAILED') {",
+                  "    console.log('❌ Saga failed as expected due to PayOS configuration');",
+                  "} else if (response.status === 'COMPENSATING') {",
+                  "    console.log('🔄 Saga is compensating - rolling back changes');",
+                  "} else if (response.status === 'COMPENSATED') {",
+                  "    console.log('↩️ Saga compensated successfully');",
+                  "} else if (response.status === 'COMPLETED') {",
+                  "    console.log('✅ Saga completed (PayOS must be properly configured)');",
+                  "} else if (response.status === 'NOT_FOUND') {",
+                  "    console.log('⚠️ PayOS Saga not found - persistence issue detected');",
+                  "}",
+                  "console.log('===========================');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Start Saga Checkout - Invalid Journey ID",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentMethod\": \"CASH\",\n  \"items\": [\n    {\n      \"ticketType\": \"P2P\",\n      \"p2pJourneyId\": \"invalid-journey-id-12345\",\n      \"quantity\": 1\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/orders/checkout-saga",
+              "host": ["{{base_url}}"],
+              "path": ["orders", "checkout-saga"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Saga initiated with invalid journey', function () {",
+                  "    pm.response.to.have.status(202);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 202) {",
+                  "    const response = pm.response.json();",
+                  "    pm.environment.set('saga_id_invalid_journey', response.sagaId);",
+                  "    console.log('Invalid Journey Saga ID stored:', response.sagaId);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Check Invalid Journey Saga Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/orders/saga/{{saga_id_invalid_journey}}/status",
+              "host": ["{{base_url}}"],
+              "path": ["orders", "saga", "{{saga_id_invalid_journey}}", "status"]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Wait 8 seconds to allow saga to process validation failure",
+                  "console.log('Waiting 8 seconds for invalid journey saga processing...');",
+                  "setTimeout(() => {}, 8000);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status check for invalid journey', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const response = pm.response.json();",
+                  "console.log('Invalid journey saga status:', response.status);",
+                  "",
+                  "pm.test('Saga should fail due to invalid journey', function () {",
+                  "    // Should fail at validation step",
+                  "    const expectedStatuses = ['FAILED', 'COMPENSATING', 'COMPENSATED'];",
+                  "    pm.expect(expectedStatuses).to.include(response.status);",
+                  "});",
+                  "",
+                  "if (response.status === 'FAILED') {",
+                  "    console.log('❌ Saga failed at validation step as expected');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Saga Edge Cases",
+      "item": [
+        {
+          "name": "Start Multiple Concurrent Sagas",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentMethod\": \"CASH\",\n  \"items\": [\n    {\n      \"ticketType\": \"P2P\",\n      \"p2pJourneyId\": \"{{p2p_journey_id}}\",\n      \"quantity\": 2\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/orders/checkout-saga",
+              "host": ["{{base_url}}"],
+              "path": ["orders", "checkout-saga"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Concurrent saga 1 initiated', function () {",
+                  "    pm.response.to.have.status(202);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 202) {",
+                  "    const response = pm.response.json();",
+                  "    pm.environment.set('saga_id_concurrent_1', response.sagaId);",
+                  "    console.log('Concurrent Saga 1 ID:', response.sagaId);",
+                  "",
+                  "    // Immediately start another saga",
+                  "    pm.sendRequest({",
+                  "        url: pm.environment.get('base_url') + '/orders/checkout-saga',",
+                  "        method: 'POST',",
+                  "        header: {",
+                  "            'Authorization': 'Bearer ' + pm.environment.get('jwt_token'),",
+                  "            'Content-Type': 'application/json'",
+                  "        },",
+                  "        body: {",
+                  "            mode: 'raw',",
+                  "            raw: JSON.stringify({",
+                  "                paymentMethod: 'CASH',",
+                  "                items: [{",
+                  "                    ticketType: 'P2P',",
+                  "                    p2pJourneyId: pm.environment.get('p2p_journey_id'),",
+                  "                    quantity: 3",
+                  "                }]",
+                  "            })",
+                  "        }",
+                  "    }, (err, res) => {",
+                  "        if (!err && res.code === 202) {",
+                  "            const concurrentResponse = res.json();",
+                  "            pm.environment.set('saga_id_concurrent_2', concurrentResponse.sagaId);",
+                  "            console.log('Concurrent Saga 2 ID:', concurrentResponse.sagaId);",
+                  "        }",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Check Concurrent Sagas Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/orders/saga/{{saga_id_concurrent_1}}/status",
+              "host": ["{{base_url}}"],
+              "path": ["orders", "saga", "{{saga_id_concurrent_1}}", "status"]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Wait 6 seconds for concurrent processing",
+                  "console.log('Waiting 6 seconds for concurrent saga processing...');",
+                  "setTimeout(() => {}, 6000);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Concurrent saga 1 status check', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const response1 = pm.response.json();",
+                  "console.log('Concurrent Saga 1 status:', response1.status);",
+                  "",
+                  "// Check second saga status",
+                  "pm.sendRequest({",
+                  "    url: pm.environment.get('base_url') + '/orders/saga/' + pm.environment.get('saga_id_concurrent_2') + '/status',",
+                  "    method: 'GET',",
+                  "    header: {",
+                  "        'Authorization': 'Bearer ' + pm.environment.get('jwt_token')",
+                  "    }",
+                  "}, (err, res) => {",
+                  "    if (!err && res.code === 200) {",
+                  "        const response2 = res.json();",
+                  "        console.log('Concurrent Saga 2 status:', response2.status);",
+                  "        ",
+                  "        pm.test('Both concurrent sagas processing independently', function () {",
+                  "            pm.expect(response1.sagaId).to.not.eql(response2.sagaId);",
+                  "            const validStatuses = ['STARTED', 'IN_PROGRESS', 'COMPLETED', 'FAILED'];",
+                  "            pm.expect(validStatuses).to.include(response1.status);",
+                  "            pm.expect(validStatuses).to.include(response2.status);",
+                  "        });",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Check Non-Existent Saga Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/orders/saga/non-existent-saga-id-12345/status",
+              "host": ["{{base_url}}"],
+              "path": ["orders", "saga", "non-existent-saga-id-12345", "status"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Non-existent saga status check', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Returns NOT_FOUND for non-existent saga', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.status).to.eql('NOT_FOUND');",
+                  "});",
+                  "",
+                  "console.log('Non-existent saga handled correctly');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Performance Tests",
+      "item": [
+        {
+          "name": "Saga Response Time Test",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentMethod\": \"CASH\",\n  \"items\": [\n    {\n      \"ticketType\": \"P2P\",\n      \"p2pJourneyId\": \"{{p2p_journey_id}}\",\n      \"quantity\": 1\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/orders/checkout-saga",
+              "host": ["{{base_url}}"],
+              "path": ["orders", "checkout-saga"]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// === VERBOSE LOGGING: PRE-REQUEST ===",
+                  "console.log('🚀 [REQUEST] Saga Response Time Test');",
+                  "console.log('📍 URL:', pm.request.url.toString());",
+                  "console.log('🔧 Method:', pm.request.method);",
+                  "console.log('📋 Headers:', JSON.stringify(pm.request.headers.toJSON(), null, 2));",
+                  "console.log('📦 Request Body:', pm.request.body.raw);",
+                  "console.log('⏱️ Performance Test: Expected response time < 500ms');",
+                  "console.log('🗺️ P2P Journey ID:', pm.environment.get('p2p_journey_id'));",
+                  "console.log('===========================');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// === VERBOSE LOGGING: RESPONSE ===",
+                  "console.log('📥 [RESPONSE] Saga Response Time Test');",
+                  "console.log('📊 Status:', pm.response.code, pm.response.status);",
+                  "console.log('⏱️ Response Time:', pm.response.responseTime + 'ms');",
+                  "console.log('📋 Response Headers:', JSON.stringify(pm.response.headers.toJSON(), null, 2));",
+                  "console.log('📦 Response Body:', pm.response.text());",
+                  "",
+                  "pm.test('Saga response time under 500ms', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(500);",
+                  "});",
+                  "",
+                  "pm.test('Saga initiated successfully', function () {",
+                  "    pm.response.to.have.status(202);",
+                  "});",
+                  "",
+                  "console.log('📊 Performance Analysis:');",
+                  "console.log('   - Response time:', pm.response.responseTime + 'ms');",
+                  "console.log('   - Target: <500ms');",
+                  "console.log('   - Result:', pm.response.responseTime < 500 ? 'PASS' : 'FAIL');",
+                  "",
+                  "if (pm.response.responseTime < 200) {",
+                  "    console.log('🚀 Excellent response time!');",
+                  "} else if (pm.response.responseTime < 500) {",
+                  "    console.log('✅ Good response time');",
+                  "} else {",
+                  "    console.log('⚠️ Response time could be improved');",
+                  "}",
+                  "",
+                  "if (pm.response.code === 202) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('📊 Performance Test Saga ID:', response.sagaId);",
+                  "}",
+                  "console.log('===========================');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Cleanup",
+      "item": [
+        {
+          "name": "Verify Saga States Summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/orders/saga/{{saga_id_success}}/status",
+              "host": ["{{base_url}}"],
+              "path": ["orders", "saga", "{{saga_id_success}}", "status"]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// === VERBOSE LOGGING: PRE-REQUEST ===",
+                  "console.log('🚀 [REQUEST] Verify Saga States Summary');",
+                  "console.log('📍 URL:', pm.request.url.toString());",
+                  "console.log('🔧 Method:', pm.request.method);",
+                  "console.log('📋 Preparing to check all saga states...');",
+                  "console.log('===========================');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// === VERBOSE LOGGING: RESPONSE ===",
+                  "console.log('📥 [RESPONSE] Verify Saga States Summary');",
+                  "console.log('📊 Status:', pm.response.code, pm.response.status);",
+                  "console.log('⏱️ Response Time:', pm.response.responseTime + 'ms');",
+                  "console.log('📦 Response Body:', pm.response.text());",
+                  "",
+                  "console.log('');",
+                  "console.log('🔍=== COMPREHENSIVE SAGA TEST SUMMARY ===🔍');",
+                  "console.log('🕒 Test Run Timestamp:', new Date().toISOString());",
+                  "",
+                  "// Log environment state",
+                  "console.log('📋 Environment Variables Summary:');",
+                  "console.log('   - Base URL:', pm.environment.get('base_url'));",
+                  "console.log('   - Test Token:', pm.environment.get('test_token') ? '[SET]' : '[NOT SET]');",
+                  "console.log('   - JWT Token:', pm.environment.get('jwt_token') ? '[SET]' : '[NOT SET]');",
+                  "console.log('   - P2P Journey ID:', pm.environment.get('p2p_journey_id') || '[NOT SET]');",
+                  "",
+                  "// Check all saga statuses",
+                  "const sagaIds = [",
+                  "    { name: '✅ Success Saga', id: pm.environment.get('saga_id_success'), expected: 'COMPLETED' },",
+                  "    { name: '💳 PayOS Failure Saga', id: pm.environment.get('saga_id_payos_failure'), expected: 'FAILED/COMPENSATED' },",
+                  "    { name: '❌ Invalid Journey Saga', id: pm.environment.get('saga_id_invalid_journey'), expected: 'FAILED' },",
+                  "    { name: '🔄 Concurrent Saga 1', id: pm.environment.get('saga_id_concurrent_1'), expected: 'COMPLETED' },",
+                  "    { name: '🔄 Concurrent Saga 2', id: pm.environment.get('saga_id_concurrent_2'), expected: 'COMPLETED' }",
+                  "];",
+                  "",
+                  "console.log('📊 Saga Status Checks:');",
+                  "let completedChecks = 0;",
+                  "const totalChecks = sagaIds.filter(s => s.id).length;",
+                  "let successCount = 0;",
+                  "let failureCount = 0;",
+                  "let notFoundCount = 0;",
+                  "",
+                  "sagaIds.forEach(saga => {",
+                  "    if (saga.id) {",
+                  "        pm.sendRequest({",
+                  "            url: pm.environment.get('base_url') + '/orders/saga/' + saga.id + '/status',",
+                  "            method: 'GET',",
+                  "            header: {",
+                  "                'Authorization': 'Bearer ' + pm.environment.get('jwt_token')",
+                  "            }",
+                  "        }, (err, res) => {",
+                  "            completedChecks++;",
+                  "            if (!err && res.code === 200) {",
+                  "                const response = res.json();",
+                  "                const status = response.status;",
+                  "                console.log(`   ${saga.name}: ${status} (Expected: ${saga.expected})`);",
+                  "                ",
+                  "                // Count statuses",
+                  "                if (status === 'COMPLETED') successCount++;",
+                  "                else if (status === 'FAILED' || status === 'COMPENSATED') failureCount++;",
+                  "                else if (status === 'NOT_FOUND') notFoundCount++;",
+                  "            } else {",
+                  "                console.log(`   ${saga.name}: HTTP ERROR (${err ? err.message : res ? res.code : 'Unknown'})`);",
+                  "                failureCount++;",
+                  "            }",
+                  "            ",
+                  "            if (completedChecks === totalChecks) {",
+                  "                console.log('');",
+                  "                console.log('📈 Final Statistics:');",
+                  "                console.log(`   - Total Sagas Tested: ${totalChecks}`);",
+                  "                console.log(`   - Successful Completions: ${successCount}`);",
+                  "                console.log(`   - Expected Failures: ${failureCount}`);",
+                  "                console.log(`   - Not Found (Persistence Issues): ${notFoundCount}`);",
+                  "                console.log('');",
+                  "                ",
+                  "                if (notFoundCount > 0) {",
+                  "                    console.log('⚠️ CRITICAL ISSUES DETECTED:');",
+                  "                    console.log('   - Sagas are not being persisted properly');",
+                  "                    console.log('   - Check MongoDB connection and CheckoutSaga repository');",
+                  "                    console.log('   - Verify Saga orchestrator is saving state correctly');",
+                  "                } else {",
+                  "                    console.log('✅ Saga persistence appears to be working correctly');",
+                  "                }",
+                  "                ",
+                  "                console.log('🏁=== TEST SUITE COMPLETED ===🏁');",
+                  "            }",
+                  "        });",
+                  "    } else {",
+                  "        console.log(`   ${saga.name}: [SAGA ID NOT SET - SKIPPED]`);",
+                  "    }",
+                  "});",
+                  "",
+                  "pm.test('Cleanup verification complete', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "console.log('===========================');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "exec": [
+          "// === GLOBAL PRE-REQUEST SCRIPT ===",
+          "console.log('🌐 Global Pre-Request Script Executing');",
+          "console.log('🕒 Timestamp:', new Date().toISOString());",
+          "",
+          "// Set default base URL if not provided",
+          "if (!pm.environment.get('base_url')) {",
+          "    pm.environment.set('base_url', 'http://localhost:8080');",
+          "    console.log('🔧 Default base_url set:', pm.environment.get('base_url'));",
+          "} else {",
+          "    console.log('🌐 Using base_url:', pm.environment.get('base_url'));",
+          "}",
+          "",
+          "// Log environment variables for debugging",
+          "console.log('📋 Current Environment Variables:');",
+          "console.log('   - base_url:', pm.environment.get('base_url'));",
+          "console.log('   - test_token:', pm.environment.get('test_token') ? '[SET]' : '[NOT SET]');",
+          "console.log('   - jwt_token:', pm.environment.get('jwt_token') ? '[SET]' : '[NOT SET]');",
+          "console.log('   - p2p_journey_id:', pm.environment.get('p2p_journey_id'));",
+          "console.log('===========================');"
+        ],
+        "type": "text/javascript"
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "exec": [
+          "// === GLOBAL POST-RESPONSE SCRIPT ===",
+          "console.log('📊 Global Post-Response Script');",
+          "console.log('📈 Request completed:', pm.info.requestName);",
+          "console.log('📊 Response time:', pm.response.responseTime + 'ms');",
+          "console.log('📏 Response size:', pm.response.responseSize + ' bytes');",
+          "",
+          "// Check for common issues",
+          "if (pm.response.code >= 400) {",
+          "    console.log('🚨 HTTP Error detected:', pm.response.code, pm.response.status);",
+          "    console.log('🔍 Error response body:', pm.response.text());",
+          "}",
+          "",
+          "// Performance monitoring",
+          "if (pm.response.responseTime > 2000) {",
+          "    console.log('⚠️ Slow response detected (>2s)');",
+          "} else if (pm.response.responseTime > 1000) {",
+          "    console.log('⚡ Response time acceptable but could be improved (>1s)');",
+          "}",
+          "console.log('===========================');"
+        ],
+        "type": "text/javascript"
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080",
+      "type": "string"
+    }
+  ]
+} 

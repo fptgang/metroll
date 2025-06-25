@@ -15,8 +15,9 @@ import org.springframework.context.annotation.Configuration;
 )
 @OpenAPIDefinition(
         servers = {
+                @io.swagger.v3.oas.annotations.servers.Server(url = "http://localhost:8080", description = "Development Server"),
                 @io.swagger.v3.oas.annotations.servers.Server(url = "https://metroll.southeastasia.cloudapp.azure.com", description = "Production Server"),
-                @io.swagger.v3.oas.annotations.servers.Server(url = "http://localhost:8080", description = "Development Server")
+                @io.swagger.v3.oas.annotations.servers.Server(url = "https://f606-58-187-123-8.ngrok-free.app", description = "test payment Server")
         }
 )
 @Configuration
