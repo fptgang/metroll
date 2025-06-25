@@ -29,4 +29,6 @@ public interface TicketService {
     TicketDto create(TicketUpsertRequest ticketUpsertRequest);
     
     List<TicketDto> createTickets(List<TicketUpsertRequest> ticketRequests);
+
+    String generateQRCodeBase64(String id) throws Exception ;
 }

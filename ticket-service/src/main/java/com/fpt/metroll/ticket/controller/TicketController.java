@@ -83,4 +83,10 @@ public class TicketController {
     public ResponseEntity<List<TicketDto>> createTickets(@RequestBody @Valid List<TicketUpsertRequest> ticketRequests) {
         return ResponseEntity.ok(ticketService.createTickets(ticketRequests));
     }
+
+    @Operation(summary = "Generate QR code base64")
+    @GetMapping("/{id}/qrcode")
+    public ResponseEntity<String> generateQRCodeBase64(@PathVariable("id") String id) throws Exception {
+        return ResponseEntity.ok(ticketService.generateQRCodeBase64(id));
+    }
 }

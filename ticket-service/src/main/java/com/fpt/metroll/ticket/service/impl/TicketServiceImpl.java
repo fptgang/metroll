@@ -1,5 +1,6 @@
 package com.fpt.metroll.ticket.service.impl;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fpt.metroll.shared.domain.dto.ticket.TicketUpsertRequest;
 import com.fpt.metroll.ticket.document.Ticket;
 import com.fpt.metroll.ticket.domain.mapper.TicketMapper;
@@ -15,12 +16,18 @@ import com.fpt.metroll.shared.exception.NoPermissionException;
 import com.fpt.metroll.shared.util.MongoHelper;
 import com.fpt.metroll.shared.util.SecurityUtil;
 import com.google.common.base.Preconditions;
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.client.j2se.MatrixToImageWriter;
+import com.google.zxing.common.BitMatrix;
+import com.google.zxing.qrcode.QRCodeWriter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.stereotype.Service;
 
+import java.io.ByteArrayOutputStream;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -204,6 +211,22 @@ public class TicketServiceImpl implements TicketService {
 
     private String generateTicketNumber() {
         return "TKT-" + System.currentTimeMillis() + "-" + (int)(Math.random() * 1000);
+    }
+
+    public String generateQRCodeBase64(String id) throws Exception {
+        Ticket ticket = repository.findById(id).orElseThrow(() -> new IllegalArgumentException("Ticket not found"));
+
+        // Configure ObjectMapper to handle Java 8 date/time types
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
+
+        String content = objectMapper.writeValueAsString(ticket);        int width = 200;
+        int height = 200;
+        QRCodeWriter writer = new QRCodeWriter();
+        BitMatrix bitMatrix = writer.encode(content, BarcodeFormat.QR_CODE, width, height);
+        ByteArrayOutputStream os = new ByteArrayOutputStream();
+        MatrixToImageWriter.writeToStream(bitMatrix, "PNG", os);
+        return Base64.getEncoder().encodeToString(os.toByteArray());
     }
 
 }
