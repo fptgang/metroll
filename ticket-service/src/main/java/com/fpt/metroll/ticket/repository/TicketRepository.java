@@ -12,7 +12,7 @@ import java.util.Optional;
 public interface TicketRepository extends MongoRepository<Ticket, String> {
     Optional<Ticket> findByTicketNumber(String ticketNumber);
 
-    List<Ticket> findByTicketOrderDetailId(String ticketOrderDetailId);
+    Optional<Ticket> findByTicketOrderDetailId(String ticketOrderDetailId);
 
     List<Ticket> findByStatus(TicketStatus status);
 

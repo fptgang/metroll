@@ -95,15 +95,14 @@ public class TicketServiceImpl implements TicketService {
     }
 
     @Override
-    public List<TicketDto> findByOrderDetailId(String orderDetailId) {
+    public TicketDto findByOrderDetailId(String orderDetailId) {
         if (!SecurityUtil.hasRole(AccountRole.ADMIN, AccountRole.STAFF))
             throw new NoPermissionException();
 
         Preconditions.checkNotNull(orderDetailId, "Order detail ID cannot be null");
-        return repository.findByTicketOrderDetailId(orderDetailId)
-                .stream()
-                .map(mapper::toDto)
-                .collect(Collectors.toList());
+        return mapper.toDto( repository.findByTicketOrderDetailId(orderDetailId).orElseThrow(
+                () -> new IllegalArgumentException("Ticket not found")
+        ));
     }
 
     @Override

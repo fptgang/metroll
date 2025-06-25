@@ -27,6 +27,9 @@ public class OrderDetail {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id")
     private Order order;
+
+    @Column(name = "ticket_id")
+    private String ticketId;
     
     @Enumerated(EnumType.STRING)
     @Column(name = "ticket_type")

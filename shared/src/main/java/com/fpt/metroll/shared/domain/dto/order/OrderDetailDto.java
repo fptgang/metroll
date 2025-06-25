@@ -11,7 +11,9 @@ import java.time.Instant;
 @Data
 public class OrderDetailDto {
     private String id;
-    private String ticketOrderId;
+    private String orderId;
+
+    private String ticketId;
     
     private TicketType ticketType; // P2P|TIMED
     private String p2pJourney; // Reference to P2PJourney._id

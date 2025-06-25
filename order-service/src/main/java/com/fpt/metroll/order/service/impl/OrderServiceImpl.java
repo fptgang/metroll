@@ -36,18 +36,11 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import jakarta.persistence.criteria.Root;
-import jakarta.persistence.criteria.CriteriaBuilder;
-import jakarta.persistence.criteria.CriteriaQuery;
-
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -334,6 +327,16 @@ public class OrderServiceImpl implements OrderService {
         if (!ticketRequests.isEmpty()) {
             try {
                 List<TicketDto> createdTickets = ticketClient.createTickets(ticketRequests);
+                Map<String, String> ticketIdMap = createdTickets.stream()
+                        .collect(Collectors.toMap(TicketDto::getTicketOrderDetailId, TicketDto::getId));
+
+                order.getOrderDetails().forEach(orderDetail -> {
+                    String ticketId = ticketIdMap.get(orderDetail.getId());
+                    if (ticketId != null) {
+                        orderDetail.setTicketId(ticketId);
+                    }
+                });
+                orderRepository.save(order);
                 log.info("Created {} tickets for order {}", createdTickets.size(), order.getId());
             } catch (Exception e) {
                 log.error("Failed to create tickets for order {}", order.getId(), e);
@@ -430,7 +433,7 @@ public class OrderServiceImpl implements OrderService {
         
         // Set ticketOrderId for each order detail
         if (dto.getOrderDetails() != null) {
-            dto.getOrderDetails().forEach(detail -> detail.setTicketOrderId(order.getId()));
+            dto.getOrderDetails().forEach(detail -> detail.setOrderId(order.getId()));
         }
         
         return dto;
