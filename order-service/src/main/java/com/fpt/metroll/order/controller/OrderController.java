@@ -30,13 +30,13 @@ public class OrderController {
     }
 
     @Operation(summary = "MSS-11: Check out - Create order and process payment")
-    @PostMapping("/checkout")
+    @PostMapping("/orders/checkout")
     public ResponseEntity<OrderDto> checkout(@RequestBody @Valid CheckoutRequest checkoutRequest) {
         return ResponseEntity.ok(orderService.checkout(checkoutRequest));
     }
 
     @Operation(summary = "MSS-13: List my orders - Get current user's orders")
-    @GetMapping("/my-orders")
+    @GetMapping("/orders/my-orders")
     public ResponseEntity<PageDto<OrderDto>> getMyOrders(
             @ParameterObject @Valid PageableDto pageableDto,
             @Parameter @RequestParam(name = "search", required = false) String search) {

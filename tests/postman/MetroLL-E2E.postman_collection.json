@@ -1,0 +1,239 @@
+{
+  "info": {
+    "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef0123456789",
+    "name": "MetroLL E2E",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_exported_using": "Postman/10.23.0"
+  },
+  "item": [
+    {
+      "name": "Account Service",
+      "item": [
+        {
+          "name": "Me - Get current account",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/account/accounts/me/",
+              "host": ["{{base_url}}"],
+              "path": ["account", "accounts", "me", ""]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "console.log('Logged-in accountId:', json.id);",
+                  "console.log('Response:', JSON.stringify(json, null, 2));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Order Service",
+      "item": [
+        {
+          "name": "Checkout - Create Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentMethod\": \"CASH\",\n  \"items\": [\n    {\n      \"ticketType\": \"P2P\",\n      \"p2pJourneyId\": \"6859285c173c7b3d557a5f3f\",\n      \"quantity\": 1\n    },\n    {\n      \"ticketType\": \"TIMED\",\n      \"timedTicketPlanId\": \"685925e5b9e950374d9e93f1\",\n      \"quantity\": 1\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/orders/checkout",
+              "host": ["{{base_url}}"],
+              "path": ["orders", "checkout"]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.expect(json).to.have.property('id');",
+                  "pm.environment.set('order_id', json.id);",
+                  "console.log('Created orderId:', json.id);",
+                  "console.log('Response:', JSON.stringify(json, null, 2));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Checkout - Create Order (PayOS)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentMethod\": \"PAYOS\",\n  \"items\": [\n    {\n      \"ticketType\": \"P2P\",\n      \"p2pJourneyId\": \"6859285c173c7b3d557a5f3f\",\n      \"quantity\": 1\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/orders/checkout",
+              "host": ["{{base_url}}"],
+              "path": ["orders", "checkout"]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.expect(json).to.have.property('paymentMethod', 'PAYOS');",
+                  "pm.expect(json).to.have.property('paymentUrl');",
+                  "pm.expect(json).to.have.property('id');",
+                  "pm.environment.set('order_id_payos', json.id);",
+                  "console.log('Created PAYOS orderId:', json.id);",
+                  "console.log('Payment Link:', json.paymentUrl);",
+                  "console.log('Response:', JSON.stringify(json, null, 2));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "My Orders - List",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/orders/my-orders?page=0&size=10",
+              "host": ["{{base_url}}"],
+              "path": ["orders", "my-orders"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "10" }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const list = pm.response.json().content || [];",
+                  "pm.expect(list.length).to.be.above(0);",
+                  "console.log('Response:', JSON.stringify(pm.response.json(), null, 2));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Order Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/orders/{{order_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["orders", "{{order_id}}"]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "pm.expect(pm.environment.get('order_id'), 'order_id missing').to.not.be.undefined;"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.expect(json).to.have.property('status');",
+                  "pm.expect(json.id).to.eql(pm.environment.get('order_id'));",
+                  "console.log('Response:', JSON.stringify(json, null, 2));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get PAYOS Order Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/orders/{{order_id_payos}}",
+              "host": ["{{base_url}}"],
+              "path": ["orders", "{{order_id_payos}}"]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "pm.expect(pm.environment.get('order_id_payos'), 'order_id_payos missing').to.not.be.undefined;"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.expect(json.paymentMethod).to.eql('PAYOS');",
+                  "console.log('Response:', JSON.stringify(json, null, 2));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8080" },
+    { "key": "jwt_token", "value": "$mock:test" },
+    { "key": "order_id_payos", "value": "" }
+  ]
+} 

@@ -26,13 +26,19 @@ import com.fpt.metroll.shared.domain.enums.TicketStatus;
 import com.fpt.metroll.shared.domain.enums.TicketType;
 import com.fpt.metroll.shared.domain.mapper.PageMapper;
 import com.fpt.metroll.shared.exception.NoPermissionException;
-import com.fpt.metroll.shared.util.MongoHelper;
 import com.fpt.metroll.shared.util.SecurityUtil;
 import com.google.common.base.Preconditions;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import jakarta.persistence.criteria.Root;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -49,7 +55,6 @@ public class OrderServiceImpl implements OrderService {
 
     private final OrderRepository orderRepository;
     private final OrderMapper orderMapper;
-    private final MongoHelper mongoHelper;
     private final TicketClient ticketClient;
     private final VoucherClient voucherClient;
     private final AccountDiscountPackageClient accountDiscountPackageClient;
@@ -57,14 +62,12 @@ public class OrderServiceImpl implements OrderService {
 
     public OrderServiceImpl(OrderRepository orderRepository,
                            OrderMapper orderMapper,
-                           MongoHelper mongoHelper,
                            TicketClient ticketClient,
                            VoucherClient voucherClient,
                            AccountDiscountPackageClient accountDiscountPackageClient,
                            PayOSService payOSService) {
         this.orderRepository = orderRepository;
         this.orderMapper = orderMapper;
-        this.mongoHelper = mongoHelper;
         this.ticketClient = ticketClient;
         this.voucherClient = voucherClient;
         this.accountDiscountPackageClient = accountDiscountPackageClient;
@@ -121,7 +124,6 @@ public class OrderServiceImpl implements OrderService {
             baseTotal = baseTotal.add(itemBaseTotal);
 
             OrderDetail orderDetail = OrderDetail.builder()
-                    .id(UUID.randomUUID().toString())
                     .ticketType(item.getTicketType())
                     .p2pJourney(p2pJourneyId)
                     .timedTicketPlan(timedTicketPlanId)
@@ -158,6 +160,11 @@ public class OrderServiceImpl implements OrderService {
                 .orderDetails(orderDetails)
                 .build();
 
+        // Set the order reference for each order detail
+        for (OrderDetail detail : orderDetails) {
+            detail.setOrder(order);
+        }
+        
         order = orderRepository.save(order);
 
         // Create PayOS payment link only for PAYOS payment method
@@ -179,27 +186,37 @@ public class OrderServiceImpl implements OrderService {
     public PageDto<OrderDto> getMyOrders(String search, PageableDto pageable) {
         String userId = SecurityUtil.requireUserId();
 
-        var res = mongoHelper.find(query -> {
+        Specification<Order> spec = (root, query, criteriaBuilder) -> {
             // Show orders where the user is either the customer or the staff
-            Criteria userCriteria = new Criteria().orOperator(
-                    Criteria.where("customerId").is(userId),
-                    Criteria.where("staffId").is(userId)
+            var userPredicate = criteriaBuilder.or(
+                    criteriaBuilder.equal(root.get("customerId"), userId),
+                    criteriaBuilder.equal(root.get("staffId"), userId)
             );
-            query.addCriteria(userCriteria);
             
             if (search != null && !search.isBlank()) {
-                Criteria searchCriteria = new Criteria().orOperator(
-                        Criteria.where("id").regex(search, "i"),
-                        Criteria.where("status").regex(search, "i"),
-                        Criteria.where("paymentMethod").regex(search, "i"),
-                        Criteria.where("transactionReference").regex(search, "i"));
-                query.addCriteria(searchCriteria);
+                var searchLower = search.toLowerCase();
+                var searchPredicate = criteriaBuilder.or(
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("id")), "%" + searchLower + "%"),
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("status").as(String.class)), "%" + searchLower + "%"),
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("paymentMethod")), "%" + searchLower + "%"),
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("transactionReference")), "%" + searchLower + "%")
+                );
+                return criteriaBuilder.and(userPredicate, searchPredicate);
             }
             
-            return query;
-        }, pageable, Order.class).map(this::convertToDto);
+            return userPredicate;
+        };
         
-        return PageMapper.INSTANCE.toPageDTO(res);
+        PageRequest pageRequest = PageRequest.of(
+            pageable.getPage(), 
+            pageable.getSize(), 
+            Sort.by(Sort.Direction.DESC, "createdAt")
+        );
+        
+        Page<Order> res = orderRepository.findAll(spec, pageRequest);
+        Page<OrderDto> dtoPage = res.map(this::convertToDto);
+        
+        return PageMapper.INSTANCE.toPageDTO(dtoPage);
     }
 
     @Override
@@ -207,22 +224,31 @@ public class OrderServiceImpl implements OrderService {
         if (!SecurityUtil.hasRole(AccountRole.ADMIN, AccountRole.STAFF))
             throw new NoPermissionException();
 
-        var res = mongoHelper.find(query -> {
+        Specification<Order> spec = (root, query, criteriaBuilder) -> {
             if (search != null && !search.isBlank()) {
-                Criteria criteria = new Criteria().orOperator(
-                        Criteria.where("id").regex(search, "i"),
-                        Criteria.where("customerId").regex(search, "i"),
-                        Criteria.where("staffId").regex(search, "i"),
-                        Criteria.where("status").regex(search, "i"),
-                        Criteria.where("paymentMethod").regex(search, "i"),
-                        Criteria.where("transactionReference").regex(search, "i"));
-                query.addCriteria(criteria);
+                var searchLower = search.toLowerCase();
+                return criteriaBuilder.or(
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("id")), "%" + searchLower + "%"),
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("customerId")), "%" + searchLower + "%"),
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("staffId")), "%" + searchLower + "%"),
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("status").as(String.class)), "%" + searchLower + "%"),
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("paymentMethod")), "%" + searchLower + "%"),
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("transactionReference")), "%" + searchLower + "%")
+                );
             }
-            
-            return query;
-        }, pageable, Order.class).map(this::convertToDto);
+            return criteriaBuilder.conjunction();
+        };
         
-        return PageMapper.INSTANCE.toPageDTO(res);
+        PageRequest pageRequest = PageRequest.of(
+            pageable.getPage(), 
+            pageable.getSize(), 
+            Sort.by(Sort.Direction.DESC, "createdAt")
+        );
+        
+        Page<Order> res = orderRepository.findAll(spec, pageRequest);
+        Page<OrderDto> dtoPage = res.map(this::convertToDto);
+        
+        return PageMapper.INSTANCE.toPageDTO(dtoPage);
     }
 
     @Override
