@@ -65,11 +65,25 @@ public class P2PJourneyServiceImpl implements P2PJourneyService {
     }
 
     @Override
-    public Optional<P2PJourneyDto> findByStations(String startStationId, String endStationId) {
-        Preconditions.checkNotNull(startStationId, "Start station ID cannot be null");
-        Preconditions.checkNotNull(endStationId, "End station ID cannot be null");
-        return repository.findByStartStationIdAndEndStationId(startStationId, endStationId)
-                .map(mapper::toDto);
+    public PageDto<P2PJourneyDto> findByStations( PageableDto pageable, String startStationId, String endStationId) {
+       Criteria criteria = new Criteria();
+       if ((startStationId!=null && endStationId != null) && (!startStationId.isEmpty() && !endStationId.isEmpty())) {
+           criteria.andOperator(
+                   Criteria.where("startStationId").is(startStationId),
+                   Criteria.where("endStationId").is(endStationId));
+       } else if ( startStationId != null && !startStationId.isEmpty()) {
+           criteria.andOperator(Criteria.where("startStationId").is(startStationId));
+       } else if ( endStationId != null && !endStationId.isEmpty()) {
+           criteria.andOperator(Criteria.where("endStationId").is(endStationId));
+       } else {
+           return findAll(null, pageable);
+       }
+
+       var res = mongoHelper.find(query -> {
+           query.addCriteria(criteria);
+           return query;
+       }, pageable, P2PJourney.class).map(mapper::toDto);
+       return PageMapper.INSTANCE.toPageDTO(res);
     }
 
     @Override
