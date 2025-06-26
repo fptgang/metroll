@@ -49,14 +49,13 @@ public class P2PJourneyController {
         return ResponseEntity.ok(p2pJourneyService.requireById(id));
     }
 
-    @Operation(summary = "Get P2P journey by stations")
+    @Operation(summary = "Get P2P journeys by stations")
     @GetMapping("/stations")
-    public ResponseEntity<P2PJourneyDto> getP2PJourneyByStations(
-            @Parameter @RequestParam("startStationId") String startStationId,
-            @Parameter @RequestParam("endStationId") String endStationId) {
-        return p2pJourneyService.findByStations(startStationId, endStationId)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<PageDto<P2PJourneyDto>> getP2PJourneyByStations(
+            @ParameterObject @Valid PageableDto pageableDto,
+            @Parameter @RequestParam(value = "startStationId", required = false) String startStationId,
+            @Parameter @RequestParam(value = "endStationId",required = false) String endStationId) {
+        return ResponseEntity.ok(p2pJourneyService.findByStations(pageableDto, startStationId, endStationId));
     }
 
     @Operation(summary = "Update P2P journey")
