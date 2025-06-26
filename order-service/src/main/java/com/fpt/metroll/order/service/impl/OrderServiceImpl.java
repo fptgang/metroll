@@ -4,6 +4,7 @@ import com.fpt.metroll.order.document.Order;
 import com.fpt.metroll.order.document.OrderDetail;
 import com.fpt.metroll.order.domain.mapper.OrderMapper;
 import com.fpt.metroll.order.repository.OrderRepository;
+import com.fpt.metroll.order.repository.OrderDetailRepository;
 import com.fpt.metroll.order.service.OrderService;
 import com.fpt.metroll.order.service.PayOSService;
 import com.fpt.metroll.shared.domain.client.AccountDiscountPackageClient;
@@ -15,6 +16,7 @@ import com.fpt.metroll.shared.domain.dto.discount.AccountDiscountPackageDto;
 import com.fpt.metroll.shared.domain.dto.order.CheckoutItemRequest;
 import com.fpt.metroll.shared.domain.dto.order.CheckoutRequest;
 import com.fpt.metroll.shared.domain.dto.order.OrderDto;
+import com.fpt.metroll.shared.domain.dto.order.OrderDetailDto;
 import com.fpt.metroll.shared.domain.dto.ticket.P2PJourneyDto;
 import com.fpt.metroll.shared.domain.dto.ticket.TicketDto;
 import com.fpt.metroll.shared.domain.dto.ticket.TicketUpsertRequest;
@@ -47,6 +49,7 @@ import java.util.stream.Collectors;
 public class OrderServiceImpl implements OrderService {
 
     private final OrderRepository orderRepository;
+    private final OrderDetailRepository orderDetailRepository;
     private final OrderMapper orderMapper;
     private final TicketClient ticketClient;
     private final VoucherClient voucherClient;
@@ -54,12 +57,14 @@ public class OrderServiceImpl implements OrderService {
     private final PayOSService payOSService;
 
     public OrderServiceImpl(OrderRepository orderRepository,
-                           OrderMapper orderMapper,
-                           TicketClient ticketClient,
-                           VoucherClient voucherClient,
-                           AccountDiscountPackageClient accountDiscountPackageClient,
-                           PayOSService payOSService) {
+            OrderDetailRepository orderDetailRepository,
+            OrderMapper orderMapper,
+            TicketClient ticketClient,
+            VoucherClient voucherClient,
+            AccountDiscountPackageClient accountDiscountPackageClient,
+            PayOSService payOSService) {
         this.orderRepository = orderRepository;
+        this.orderDetailRepository = orderDetailRepository;
         this.orderMapper = orderMapper;
         this.ticketClient = ticketClient;
         this.voucherClient = voucherClient;
@@ -71,17 +76,18 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     public OrderDto checkout(CheckoutRequest checkoutRequest) {
         String currentUserId = SecurityUtil.requireUserId();
-        
+
         Preconditions.checkNotNull(checkoutRequest, "Checkout request cannot be null");
-        Preconditions.checkArgument(checkoutRequest.getItems() != null && !checkoutRequest.getItems().isEmpty(), 
+        Preconditions.checkArgument(checkoutRequest.getItems() != null && !checkoutRequest.getItems().isEmpty(),
                 "Checkout items cannot be empty");
-        Preconditions.checkArgument(checkoutRequest.getPaymentMethod() != null && !checkoutRequest.getPaymentMethod().isBlank(),
+        Preconditions.checkArgument(
+                checkoutRequest.getPaymentMethod() != null && !checkoutRequest.getPaymentMethod().isBlank(),
                 "Payment method cannot be null or blank");
 
         // Determine if this is a staff purchase
-        boolean isStaffPurchase = SecurityUtil.hasRole(AccountRole.STAFF, AccountRole.ADMIN) && 
-                                 checkoutRequest.getCustomerId() != null;
-        
+        boolean isStaffPurchase = SecurityUtil.hasRole(AccountRole.STAFF, AccountRole.ADMIN) &&
+                checkoutRequest.getCustomerId() != null;
+
         String customerId = isStaffPurchase ? checkoutRequest.getCustomerId() : currentUserId;
         String staffId = isStaffPurchase ? currentUserId : null;
 
@@ -104,7 +110,8 @@ public class OrderServiceImpl implements OrderService {
                 unitPrice = BigDecimal.valueOf(journey.getBasePrice());
                 p2pJourneyId = item.getP2pJourneyId();
             } else if (item.getTicketType() == TicketType.TIMED) {
-                Preconditions.checkArgument(item.getTimedTicketPlanId() != null && !item.getTimedTicketPlanId().isBlank(),
+                Preconditions.checkArgument(
+                        item.getTimedTicketPlanId() != null && !item.getTimedTicketPlanId().isBlank(),
                         "Timed Ticket Plan ID cannot be null for TIMED tickets");
                 TimedTicketPlanDto plan = ticketClient.getTimedTicketPlanById(item.getTimedTicketPlanId());
                 unitPrice = BigDecimal.valueOf(plan.getBasePrice());
@@ -132,7 +139,7 @@ public class OrderServiceImpl implements OrderService {
 
         // Calculate discounts
         BigDecimal totalDiscountAmount = calculateDiscounts(checkoutRequest, baseTotal);
-        
+
         // Distribute discount proportionally across order details
         distributeDiscount(orderDetails, totalDiscountAmount, baseTotal);
 
@@ -157,7 +164,7 @@ public class OrderServiceImpl implements OrderService {
         for (OrderDetail detail : orderDetails) {
             detail.setOrder(order);
         }
-        
+
         order = orderRepository.save(order);
 
         // Create PayOS payment link only for PAYOS payment method
@@ -170,7 +177,7 @@ public class OrderServiceImpl implements OrderService {
             createTicketsForOrder(order);
         }
 
-        log.info("Created order {} for customer {} with staff {} and final total {}", 
+        log.info("Created order {} for customer {} with staff {} and final total {}",
                 order.getId(), customerId, staffId, finalTotal);
         return convertToDto(order);
     }
@@ -183,32 +190,31 @@ public class OrderServiceImpl implements OrderService {
             // Show orders where the user is either the customer or the staff
             var userPredicate = criteriaBuilder.or(
                     criteriaBuilder.equal(root.get("customerId"), userId),
-                    criteriaBuilder.equal(root.get("staffId"), userId)
-            );
-            
+                    criteriaBuilder.equal(root.get("staffId"), userId));
+
             if (search != null && !search.isBlank()) {
                 var searchLower = search.toLowerCase();
                 var searchPredicate = criteriaBuilder.or(
                         criteriaBuilder.like(criteriaBuilder.lower(root.get("id")), "%" + searchLower + "%"),
-                        criteriaBuilder.like(criteriaBuilder.lower(root.get("status").as(String.class)), "%" + searchLower + "%"),
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("status").as(String.class)),
+                                "%" + searchLower + "%"),
                         criteriaBuilder.like(criteriaBuilder.lower(root.get("paymentMethod")), "%" + searchLower + "%"),
-                        criteriaBuilder.like(criteriaBuilder.lower(root.get("transactionReference")), "%" + searchLower + "%")
-                );
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("transactionReference")),
+                                "%" + searchLower + "%"));
                 return criteriaBuilder.and(userPredicate, searchPredicate);
             }
-            
+
             return userPredicate;
         };
-        
+
         PageRequest pageRequest = PageRequest.of(
-            pageable.getPage(), 
-            pageable.getSize(), 
-            Sort.by(Sort.Direction.DESC, "createdAt")
-        );
-        
+                pageable.getPage(),
+                pageable.getSize(),
+                Sort.by(Sort.Direction.DESC, "createdAt"));
+
         Page<Order> res = orderRepository.findAll(spec, pageRequest);
         Page<OrderDto> dtoPage = res.map(this::convertToDto);
-        
+
         return PageMapper.INSTANCE.toPageDTO(dtoPage);
     }
 
@@ -224,37 +230,37 @@ public class OrderServiceImpl implements OrderService {
                         criteriaBuilder.like(criteriaBuilder.lower(root.get("id")), "%" + searchLower + "%"),
                         criteriaBuilder.like(criteriaBuilder.lower(root.get("customerId")), "%" + searchLower + "%"),
                         criteriaBuilder.like(criteriaBuilder.lower(root.get("staffId")), "%" + searchLower + "%"),
-                        criteriaBuilder.like(criteriaBuilder.lower(root.get("status").as(String.class)), "%" + searchLower + "%"),
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("status").as(String.class)),
+                                "%" + searchLower + "%"),
                         criteriaBuilder.like(criteriaBuilder.lower(root.get("paymentMethod")), "%" + searchLower + "%"),
-                        criteriaBuilder.like(criteriaBuilder.lower(root.get("transactionReference")), "%" + searchLower + "%")
-                );
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("transactionReference")),
+                                "%" + searchLower + "%"));
             }
             return criteriaBuilder.conjunction();
         };
-        
+
         PageRequest pageRequest = PageRequest.of(
-            pageable.getPage(), 
-            pageable.getSize(), 
-            Sort.by(Sort.Direction.DESC, "createdAt")
-        );
-        
+                pageable.getPage(),
+                pageable.getSize(),
+                Sort.by(Sort.Direction.DESC, "createdAt"));
+
         Page<Order> res = orderRepository.findAll(spec, pageRequest);
         Page<OrderDto> dtoPage = res.map(this::convertToDto);
-        
+
         return PageMapper.INSTANCE.toPageDTO(dtoPage);
     }
 
     @Override
     public Optional<OrderDto> getOrderById(String orderId) {
         Preconditions.checkNotNull(orderId, "Order ID cannot be null");
-        
+
         Optional<Order> orderOpt = orderRepository.findById(orderId);
         if (orderOpt.isEmpty()) {
             return Optional.empty();
         }
-        
+
         Order order = orderOpt.get();
-        
+
         // Check permissions
         String currentUserId = SecurityUtil.getUserId();
         if (!SecurityUtil.hasRole(AccountRole.ADMIN, AccountRole.STAFF)
@@ -262,7 +268,7 @@ public class OrderServiceImpl implements OrderService {
                 && !Objects.equals(currentUserId, order.getStaffId())) {
             throw new NoPermissionException();
         }
-        
+
         return Optional.of(convertToDto(order));
     }
 
@@ -270,6 +276,38 @@ public class OrderServiceImpl implements OrderService {
     public OrderDto requireOrderById(String orderId) {
         return getOrderById(orderId)
                 .orElseThrow(() -> new IllegalArgumentException("Order not found"));
+    }
+
+    @Override
+    public Optional<OrderDetailDto> getOrderDetailById(String orderDetailId) {
+        Preconditions.checkNotNull(orderDetailId, "Order detail ID cannot be null");
+
+        Optional<OrderDetail> orderDetailOpt = orderDetailRepository.findById(orderDetailId);
+        if (orderDetailOpt.isEmpty()) {
+            return Optional.empty();
+        }
+
+        OrderDetail orderDetail = orderDetailOpt.get();
+
+        // Check permissions - user must be able to access the parent order
+        String currentUserId = SecurityUtil.getUserId();
+        if (!SecurityUtil.hasRole(AccountRole.ADMIN, AccountRole.STAFF)) {
+            Order order = orderDetail.getOrder();
+            if (!Objects.equals(currentUserId, order.getCustomerId())
+                    && !Objects.equals(currentUserId, order.getStaffId())) {
+                throw new NoPermissionException();
+            }
+        }
+
+        OrderDetailDto dto = orderMapper.toDetailDto(orderDetail);
+        dto.setOrderId(orderDetail.getOrder().getId());
+        return Optional.of(dto);
+    }
+
+    @Override
+    public OrderDetailDto requireOrderDetailById(String orderDetailId) {
+        return getOrderDetailById(orderDetailId)
+                .orElseThrow(() -> new IllegalArgumentException("Order detail not found"));
     }
 
     private void createPayOSPaymentLink(Order order) {
@@ -282,7 +320,7 @@ public class OrderServiceImpl implements OrderService {
             // Set order to FAILED if PayOS payment link creation fails
             order.setStatus(OrderStatus.FAILED);
             orderRepository.save(order);
-            
+
             // Re-throw the exception to propagate to the API response
             throw e;
         }
@@ -294,10 +332,10 @@ public class OrderServiceImpl implements OrderService {
             // Update order status to COMPLETED
             order.setStatus(OrderStatus.COMPLETED);
             orderRepository.save(order);
-            
+
             // Create tickets for the order
             createTicketsForOrder(order);
-            
+
             log.info("Payment completed and tickets created for order {}", order.getId());
         } catch (Exception e) {
             log.error("Failed to process payment completion for order {}", order.getId(), e);
@@ -308,22 +346,22 @@ public class OrderServiceImpl implements OrderService {
 
     private void createTicketsForOrder(Order order) {
         List<TicketUpsertRequest> ticketRequests = new ArrayList<>();
-        
+
         for (OrderDetail detail : order.getOrderDetails()) {
             for (int i = 0; i < detail.getQuantity(); i++) {
                 Instant validUntil = calculateValidUntil(detail);
-                
+
                 TicketUpsertRequest ticketRequest = TicketUpsertRequest.builder()
                         .ticketType(detail.getTicketType())
                         .ticketOrderDetailId(detail.getId())
                         .validUntil(validUntil)
                         .status(TicketStatus.VALID)
                         .build();
-                
+
                 ticketRequests.add(ticketRequest);
             }
         }
-        
+
         if (!ticketRequests.isEmpty()) {
             try {
                 List<TicketDto> createdTickets = ticketClient.createTickets(ticketRequests);
@@ -355,7 +393,8 @@ public class OrderServiceImpl implements OrderService {
                 TimedTicketPlanDto plan = ticketClient.getTimedTicketPlanById(detail.getTimedTicketPlan());
                 return Instant.now().plus(plan.getValidDuration(), ChronoUnit.DAYS);
             } catch (Exception e) {
-                log.warn("Failed to get timed ticket plan duration for {}, defaulting to 30 days", detail.getTimedTicketPlan());
+                log.warn("Failed to get timed ticket plan duration for {}, defaulting to 30 days",
+                        detail.getTimedTicketPlan());
                 return Instant.now().plus(30, ChronoUnit.DAYS);
             }
         }
@@ -364,7 +403,7 @@ public class OrderServiceImpl implements OrderService {
 
     private BigDecimal calculateDiscounts(CheckoutRequest checkoutRequest, BigDecimal baseTotal) {
         BigDecimal totalDiscountAmount = BigDecimal.ZERO;
-        
+
         // Apply discount package if provided
         if (checkoutRequest.getDiscountPackageId() != null) {
             try {
@@ -373,11 +412,11 @@ public class OrderServiceImpl implements OrderService {
                 BigDecimal packageDiscount = calculateDiscountPackageDiscount(discountPackage, baseTotal);
                 totalDiscountAmount = totalDiscountAmount.add(packageDiscount);
             } catch (Exception e) {
-                log.warn("Failed to apply discount package {}: {}", 
+                log.warn("Failed to apply discount package {}: {}",
                         checkoutRequest.getDiscountPackageId(), e.getMessage());
             }
         }
-        
+
         // Apply voucher if provided
         if (checkoutRequest.getVoucherId() != null) {
             try {
@@ -388,12 +427,13 @@ public class OrderServiceImpl implements OrderService {
                 log.warn("Failed to apply voucher {}: {}", checkoutRequest.getVoucherId(), e.getMessage());
             }
         }
-        
+
         return totalDiscountAmount;
     }
 
-    private BigDecimal calculateDiscountPackageDiscount(AccountDiscountPackageDto discountPackage, BigDecimal baseTotal) {
-        // This is a simplified calculation - in real implementation, 
+    private BigDecimal calculateDiscountPackageDiscount(AccountDiscountPackageDto discountPackage,
+            BigDecimal baseTotal) {
+        // This is a simplified calculation - in real implementation,
         // you would fetch the discount package details and apply the specific rules
         // For now, assume a 10% discount
         return baseTotal.multiply(BigDecimal.valueOf(0.10));
@@ -401,11 +441,11 @@ public class OrderServiceImpl implements OrderService {
 
     private BigDecimal calculateVoucherDiscount(VoucherDto voucher, BigDecimal baseTotal) {
         // Check if voucher is valid and meets minimum transaction amount
-        if (voucher.getMinTransactionAmount() != null && 
-            baseTotal.compareTo(BigDecimal.valueOf(voucher.getMinTransactionAmount())) < 0) {
+        if (voucher.getMinTransactionAmount() != null &&
+                baseTotal.compareTo(BigDecimal.valueOf(voucher.getMinTransactionAmount())) < 0) {
             throw new IllegalArgumentException("Order amount does not meet voucher minimum transaction requirement");
         }
-        
+
         return BigDecimal.valueOf(voucher.getDiscountAmount());
     }
 
@@ -418,7 +458,7 @@ public class OrderServiceImpl implements OrderService {
             // Calculate proportional discount for this item
             BigDecimal proportion = detail.getBaseTotal().divide(baseTotal, 4, BigDecimal.ROUND_HALF_UP);
             BigDecimal itemDiscount = totalDiscount.multiply(proportion).setScale(2, BigDecimal.ROUND_HALF_UP);
-            
+
             detail.setDiscountTotal(itemDiscount);
             detail.setFinalTotal(detail.getBaseTotal().subtract(itemDiscount));
         }
@@ -427,15 +467,15 @@ public class OrderServiceImpl implements OrderService {
     private String generateTransactionReference() {
         return "TXN-" + System.currentTimeMillis() + "-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
     }
-    
+
     private OrderDto convertToDto(Order order) {
         OrderDto dto = orderMapper.toDto(order);
-        
+
         // Set ticketOrderId for each order detail
         if (dto.getOrderDetails() != null) {
             dto.getOrderDetails().forEach(detail -> detail.setOrderId(order.getId()));
         }
-        
+
         return dto;
     }
-} 
+}

@@ -1,15 +1,19 @@
 package com.fpt.metroll.ticket.service.impl;
 
+import com.fpt.metroll.ticket.document.P2PJourney;
 import com.fpt.metroll.ticket.document.Ticket;
 import com.fpt.metroll.ticket.document.TicketValidation;
 import com.fpt.metroll.ticket.domain.dto.TicketValidationCreateRequest;
 import com.fpt.metroll.ticket.domain.mapper.TicketValidationMapper;
+import com.fpt.metroll.ticket.repository.P2PJourneyRepository;
 import com.fpt.metroll.ticket.repository.TicketRepository;
 import com.fpt.metroll.ticket.repository.TicketValidationRepository;
 import com.fpt.metroll.ticket.service.TicketValidationService;
 import com.fpt.metroll.shared.domain.dto.PageDto;
 import com.fpt.metroll.shared.domain.dto.PageableDto;
 import com.fpt.metroll.shared.domain.dto.ticket.TicketValidationDto;
+import com.fpt.metroll.shared.domain.dto.order.OrderDetailDto;
+import com.fpt.metroll.shared.domain.dto.ticket.P2PJourneyDto;
 import com.fpt.metroll.shared.domain.enums.AccountRole;
 import com.fpt.metroll.shared.domain.enums.TicketStatus;
 import com.fpt.metroll.shared.domain.enums.TicketType;
@@ -18,6 +22,8 @@ import com.fpt.metroll.shared.domain.mapper.PageMapper;
 import com.fpt.metroll.shared.exception.NoPermissionException;
 import com.fpt.metroll.shared.util.MongoHelper;
 import com.fpt.metroll.shared.util.SecurityUtil;
+import com.fpt.metroll.shared.domain.client.OrderClient;
+import com.fpt.metroll.shared.domain.client.TicketClient;
 import com.google.common.base.Preconditions;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -27,6 +33,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.Objects;
 
 @Slf4j
 @Service
@@ -36,15 +43,23 @@ public class TicketValidationServiceImpl implements TicketValidationService {
     private final TicketValidationMapper mapper;
     private final TicketValidationRepository repository;
     private final TicketRepository ticketRepository;
+    private final OrderClient orderClient;
+    private final TicketClient ticketClient;
+    private final P2PJourneyRepository p2PJourneyRepository;
 
     public TicketValidationServiceImpl(MongoHelper mongoHelper,
-            TicketValidationMapper mapper,
-            TicketValidationRepository repository,
-            TicketRepository ticketRepository) {
+                                       TicketValidationMapper mapper,
+                                       TicketValidationRepository repository,
+                                       TicketRepository ticketRepository,
+                                       OrderClient orderClient,
+                                       TicketClient ticketClient, P2PJourneyRepository p2PJourneyRepository) {
         this.mongoHelper = mongoHelper;
         this.mapper = mapper;
         this.repository = repository;
         this.ticketRepository = ticketRepository;
+        this.orderClient = orderClient;
+        this.ticketClient = ticketClient;
+        this.p2PJourneyRepository = p2PJourneyRepository;
     }
 
     @Override
@@ -158,6 +173,41 @@ public class TicketValidationServiceImpl implements TicketValidationService {
     }
 
     private void validateP2PTicket(Ticket ticket, TicketValidationCreateRequest request) {
+        // Get the order detail associated with this ticket
+        Preconditions.checkArgument(ticket.getTicketOrderDetailId() != null,
+                "Ticket must have an associated order detail for P2P validation");
+
+        try {
+            OrderDetailDto orderDetail = orderClient.getOrderDetail(ticket.getTicketOrderDetailId());
+            Preconditions.checkArgument(orderDetail.getP2pJourney() != null,
+                    "P2P ticket must have an associated journey");
+
+            // Get the P2P journey information
+            P2PJourney p2pJourney = p2PJourneyRepository.findById(orderDetail.getP2pJourney()).orElseThrow(
+                    () -> new IllegalArgumentException("P2P journey not found")
+            );
+
+            // Validate station based on validation type
+            if (request.getValidationType() == ValidationType.ENTRY) {
+                // For entry, user must be at the start station
+                if (!Objects.equals(request.getStationId(), p2pJourney.getStartStationId())) {
+                    throw new IllegalArgumentException(
+                            String.format("Entry validation must be at start station. Expected: %s, Got: %s",
+                                    p2pJourney.getStartStationId(), request.getStationId()));
+                }
+            } else if (request.getValidationType() == ValidationType.EXIT) {
+                // For exit, user must be at the end station
+                if (!Objects.equals(request.getStationId(), p2pJourney.getEndStationId())) {
+                    throw new IllegalArgumentException(
+                            String.format("Exit validation must be at end station. Expected: %s, Got: %s",
+                                    p2pJourney.getEndStationId(), request.getStationId()));
+                }
+            }
+        } catch (Exception e) {
+            log.error("Failed to validate P2P ticket stations for ticket {}: {}", ticket.getId(), e.getMessage());
+            throw new IllegalArgumentException("Failed to validate ticket stations: " + e.getMessage());
+        }
+
         // For P2P tickets, check validation history
         List<TicketValidation> validations = repository.findByTicketIdOrderByValidationTimeDesc(ticket.getId());
 
@@ -185,7 +235,8 @@ public class TicketValidationServiceImpl implements TicketValidationService {
     }
 
     private void validateTimedTicket(Ticket ticket, TicketValidationCreateRequest request) {
-        // For timed tickets, just check if there's an unmatched entry for exit validations
+        // For timed tickets, just check if there's an unmatched entry for exit
+        // validations
         if (request.getValidationType() == ValidationType.EXIT) {
             List<TicketValidation> validations = repository.findByTicketIdOrderByValidationTimeDesc(ticket.getId());
 
