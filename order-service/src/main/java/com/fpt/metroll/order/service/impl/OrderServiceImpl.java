@@ -84,6 +84,9 @@ public class OrderServiceImpl implements OrderService {
                 checkoutRequest.getPaymentMethod() != null && !checkoutRequest.getPaymentMethod().isBlank(),
                 "Payment method cannot be null or blank");
 
+        // Expand checkout items
+        checkoutRequest = expandCheckoutItemsByQuantity(checkoutRequest);
+
         // Determine if this is a staff purchase
         boolean isStaffPurchase = SecurityUtil.hasRole(AccountRole.STAFF, AccountRole.ADMIN) &&
                 checkoutRequest.getCustomerId() != null;
@@ -477,5 +480,43 @@ public class OrderServiceImpl implements OrderService {
         }
 
         return dto;
+    }
+
+
+    private CheckoutRequest expandCheckoutItemsByQuantity(CheckoutRequest originalRequest) {
+        if (originalRequest == null || originalRequest.getItems() == null) {
+            return originalRequest;
+        }
+
+        List<CheckoutItemRequest> expandedItems = new ArrayList<>();
+
+        for (CheckoutItemRequest item : originalRequest.getItems()) {
+            int quantity = item.getQuantity();
+
+            if (quantity == 1) {
+                // If quantity is 1, just add the original item
+                expandedItems.add(item);
+            } else {
+                // If quantity > 1, create multiple copies with quantity = 1
+                for (int i = 0; i < quantity; i++) {
+                    CheckoutItemRequest singleItem = CheckoutItemRequest.builder()
+                            .ticketType(item.getTicketType())
+                            .p2pJourneyId(item.getP2pJourneyId())
+                            .timedTicketPlanId(item.getTimedTicketPlanId())
+                            .quantity(1)
+                            .build();
+                    expandedItems.add(singleItem);
+                }
+            }
+        }
+
+        // Create a new CheckoutRequest with expanded items
+        return CheckoutRequest.builder()
+                .items(expandedItems)
+                .paymentMethod(originalRequest.getPaymentMethod())
+                .discountPackageId(originalRequest.getDiscountPackageId())
+                .voucherId(originalRequest.getVoucherId())
+                .customerId(originalRequest.getCustomerId())
+                .build();
     }
 }

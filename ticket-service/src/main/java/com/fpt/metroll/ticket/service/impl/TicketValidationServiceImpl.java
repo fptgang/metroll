@@ -31,6 +31,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.Objects;
@@ -178,17 +179,20 @@ public class TicketValidationServiceImpl implements TicketValidationService {
                 "Ticket must have an associated order detail for P2P validation");
 
         try {
-            OrderDetailDto orderDetail = orderClient.getOrderDetail(ticket.getTicketOrderDetailId());
-            Preconditions.checkArgument(orderDetail.getP2pJourney() != null,
+            Map<String, String> orderDetail = orderClient.getOrderDetail(ticket.getTicketOrderDetailId());
+            Preconditions.checkArgument(orderDetail.get("p2pJourney") != null,
                     "P2P ticket must have an associated journey");
 
             // Get the P2P journey information
-            P2PJourney p2pJourney = p2PJourneyRepository.findById(orderDetail.getP2pJourney()).orElseThrow(
+            P2PJourney p2pJourney = p2PJourneyRepository.findById(orderDetail.get("p2pJourney")).orElseThrow(
                     () -> new IllegalArgumentException("P2P journey not found")
             );
+            log.info("Validating start station: {} - end station: {}  at station: {}", p2pJourney.getStartStationId(), p2pJourney.getEndStationId(), request.getStationId());
 
             // Validate station based on validation type
             if (request.getValidationType() == ValidationType.ENTRY) {
+
+                log.info("Validating start station: {} at station: {}", p2pJourney.getStartStationId(), request.getStationId());
                 // For entry, user must be at the start station
                 if (!Objects.equals(request.getStationId(), p2pJourney.getStartStationId())) {
                     throw new IllegalArgumentException(
