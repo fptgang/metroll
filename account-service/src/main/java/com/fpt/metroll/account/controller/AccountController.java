@@ -1,6 +1,7 @@
 package com.fpt.metroll.account.controller;
 
 import com.fpt.metroll.account.domain.dto.AccountCreateRequest;
+import com.fpt.metroll.account.domain.dto.AccountDashboardDto;
 import com.fpt.metroll.account.domain.dto.AccountUpdateRequest;
 import com.fpt.metroll.account.domain.dto.StationAssignRequest;
 import com.fpt.metroll.account.service.AccountService;
@@ -32,6 +33,12 @@ public class AccountController {
     public AccountController(AccountService accountService, AuthService authService) {
         this.accountService = accountService;
         this.authService = authService;
+    }
+
+    @Operation(summary = "Get account service dashboard statistics")
+    @GetMapping("/dashboard")
+    public ResponseEntity<AccountDashboardDto> getDashboard() {
+        return ResponseEntity.ok(accountService.getDashboard());
     }
 
     @Operation(summary = "Login")

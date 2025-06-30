@@ -1,6 +1,8 @@
 package com.fpt.metroll.order.controller;
 
+import com.fpt.metroll.order.domain.dto.OrderDashboardDto;
 import com.fpt.metroll.order.service.CheckoutSagaOrchestrator;
+import com.fpt.metroll.order.service.OrderDashboardService;
 import com.fpt.metroll.order.service.OrderService;
 import com.fpt.metroll.order.service.PayOSService;
 import com.fpt.metroll.shared.util.SecurityUtil;
@@ -36,13 +38,22 @@ public class OrderController {
         private final OrderService orderService;
         private final PayOSService payOSService;
         private final CheckoutSagaOrchestrator checkoutSagaOrchestrator;
+        private final OrderDashboardService orderDashboardService;
 
         public OrderController(OrderService orderService,
                         PayOSService payOSService,
-                        CheckoutSagaOrchestrator checkoutSagaOrchestrator) {
+                        CheckoutSagaOrchestrator checkoutSagaOrchestrator,
+                        OrderDashboardService orderDashboardService) {
                 this.orderService = orderService;
                 this.payOSService = payOSService;
                 this.checkoutSagaOrchestrator = checkoutSagaOrchestrator;
+                this.orderDashboardService = orderDashboardService;
+        }
+
+        @Operation(summary = "Get order service dashboard statistics")
+        @GetMapping("/orders/dashboard")
+        public ResponseEntity<OrderDashboardDto> getDashboard() {
+                return ResponseEntity.ok(orderDashboardService.getDashboard());
         }
 
         @Operation(summary = "MSS-11: Check out - Create order and process payment")

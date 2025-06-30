@@ -1,6 +1,7 @@
 package com.fpt.metroll.account.service;
 
 import com.fpt.metroll.account.domain.dto.AccountCreateRequest;
+import com.fpt.metroll.account.domain.dto.AccountDashboardDto;
 import com.fpt.metroll.account.domain.dto.AccountUpdateRequest;
 import com.fpt.metroll.account.domain.dto.StationAssignRequest;
 import com.fpt.metroll.shared.domain.dto.PageDto;
@@ -27,4 +28,6 @@ public interface AccountService {
     void deactivate(String id);
 
     AccountDto assignStation(String accountId, StationAssignRequest request);
+
+    AccountDashboardDto getDashboard();
 }

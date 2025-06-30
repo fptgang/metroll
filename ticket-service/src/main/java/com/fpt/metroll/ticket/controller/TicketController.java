@@ -1,6 +1,8 @@
 package com.fpt.metroll.ticket.controller;
 
 import com.fpt.metroll.shared.domain.dto.ticket.TicketUpsertRequest;
+import com.fpt.metroll.ticket.domain.dto.TicketDashboardDto;
+import com.fpt.metroll.ticket.service.TicketDashboardService;
 import com.fpt.metroll.ticket.service.TicketService;
 import com.fpt.metroll.shared.domain.dto.PageDto;
 import com.fpt.metroll.shared.domain.dto.PageableDto;
@@ -26,9 +28,17 @@ import java.util.List;
 public class TicketController {
 
     private final TicketService ticketService;
+    private final TicketDashboardService ticketDashboardService;
 
-    public TicketController(TicketService ticketService) {
+    public TicketController(TicketService ticketService, TicketDashboardService ticketDashboardService) {
         this.ticketService = ticketService;
+        this.ticketDashboardService = ticketDashboardService;
+    }
+
+    @Operation(summary = "Get ticket service dashboard statistics")
+    @GetMapping("/dashboard")
+    public ResponseEntity<TicketDashboardDto> getDashboard() {
+        return ResponseEntity.ok(ticketDashboardService.getDashboard());
     }
 
     @Operation(summary = "List tickets by search & filter criteria")

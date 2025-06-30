@@ -143,7 +143,7 @@ public class TicketValidationServiceImpl implements TicketValidationService {
 
         // Get the authenticated staff's assigned station
         String staffId = SecurityUtil.requireUserId();
-        Map<String,String> staffAccount = accountClient.getAccount(staffId);
+        Map<String, String> staffAccount = accountClient.getAccount(staffId);
 
         if (staffAccount.get("assignedStation") == null || staffAccount.get("assignedStation").isBlank()) {
             throw new IllegalStateException("Staff member is not assigned to any station");
