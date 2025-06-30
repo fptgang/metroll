@@ -3,6 +3,7 @@ package com.fpt.metroll.account.service.impl;
 import com.fpt.metroll.account.document.Account;
 import com.fpt.metroll.account.domain.dto.AccountCreateRequest;
 import com.fpt.metroll.account.domain.dto.AccountUpdateRequest;
+import com.fpt.metroll.account.domain.dto.StationAssignRequest;
 import com.fpt.metroll.account.domain.mapper.AccountMapper;
 import com.fpt.metroll.account.repository.AccountRepository;
 import com.fpt.metroll.account.service.AccountService;
@@ -14,6 +15,7 @@ import com.fpt.metroll.shared.domain.mapper.PageMapper;
 import com.fpt.metroll.shared.exception.NoPermissionException;
 import com.fpt.metroll.shared.util.MongoHelper;
 import com.fpt.metroll.shared.util.SecurityUtil;
+import com.google.common.base.Preconditions;
 import org.springframework.stereotype.Service;
 import org.springframework.data.mongodb.core.query.Criteria;
 import com.google.firebase.auth.FirebaseAuth;
@@ -32,8 +34,8 @@ public class AccountServiceImpl implements AccountService {
     private final AccountRepository accountRepository;
 
     public AccountServiceImpl(MongoHelper mongoHelper,
-                              AccountMapper accountMapper,
-                              AccountRepository accountRepository) {
+            AccountMapper accountMapper,
+            AccountRepository accountRepository) {
         this.mongoHelper = mongoHelper;
         this.accountMapper = accountMapper;
         this.accountRepository = accountRepository;
@@ -65,6 +67,28 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
+    public PageDto<AccountDto> findStaff(String search, PageableDto pageable) {
+        if (!SecurityUtil.hasRole(AccountRole.ADMIN))
+            throw new NoPermissionException();
+
+        var res = mongoHelper.find(query -> {
+            // Filter only STAFF role accounts
+            query.addCriteria(Criteria.where("role").is(AccountRole.STAFF.name()));
+
+            if (search != null && !search.isBlank()) {
+                Criteria criteria = new Criteria().orOperator(
+                        Criteria.where("fullName").regex(search, "i"),
+                        Criteria.where("email").regex(search, "i"),
+                        Criteria.where("phoneNumber").regex(search, "i"));
+                query.addCriteria(criteria);
+            }
+
+            return query;
+        }, pageable, Account.class).map(accountMapper::toDto);
+        return PageMapper.INSTANCE.toPageDTO(res);
+    }
+
+    @Override
     public Optional<AccountDto> findById(String id) {
         if (!SecurityUtil.hasRole(AccountRole.ADMIN, AccountRole.STAFF)
                 && !Objects.equals(SecurityUtil.getUserId(), id))
@@ -76,7 +100,7 @@ public class AccountServiceImpl implements AccountService {
     @Override
     public AccountDto requireById(String id) {
         if (!SecurityUtil.hasRole(AccountRole.ADMIN, AccountRole.STAFF)
-            && !Objects.equals(SecurityUtil.getUserId(), id))
+                && !Objects.equals(SecurityUtil.getUserId(), id))
             throw new NoPermissionException();
 
         return accountRepository.findById(id)
@@ -162,6 +186,30 @@ public class AccountServiceImpl implements AccountService {
         account.setActive(false);
         accountRepository.save(account);
 
+    }
+
+    @Override
+    public AccountDto assignStation(String accountId, StationAssignRequest request) {
+        if (!SecurityUtil.hasRole(AccountRole.ADMIN))
+            throw new NoPermissionException();
+
+        Preconditions.checkNotNull(accountId, "Account ID cannot be null");
+        Preconditions.checkNotNull(request, "Request cannot be null");
+        Preconditions.checkArgument(request.getStationCode() != null && !request.getStationCode().isBlank(),
+                "Station ID cannot be blank");
+
+        Account account = accountRepository.findById(accountId)
+                .orElseThrow(() -> new IllegalArgumentException("Account not found"));
+
+        // Only STAFF accounts can be assigned to stations
+        if (account.getRole() != AccountRole.STAFF) {
+            throw new IllegalStateException("Only STAFF accounts can be assigned to stations");
+        }
+
+        account.setAssignedStation(request.getStationCode());
+        account = accountRepository.save(account);
+
+        return accountMapper.toDto(account);
     }
 
 }

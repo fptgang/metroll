@@ -2,6 +2,7 @@ package com.fpt.metroll.account.controller;
 
 import com.fpt.metroll.account.domain.dto.AccountCreateRequest;
 import com.fpt.metroll.account.domain.dto.AccountUpdateRequest;
+import com.fpt.metroll.account.domain.dto.StationAssignRequest;
 import com.fpt.metroll.account.service.AccountService;
 import com.fpt.metroll.account.service.AuthService;
 import com.fpt.metroll.shared.domain.dto.PageDto;
@@ -53,6 +54,14 @@ public class AccountController {
         return ResponseEntity.ok(accountService.findAll(search, pageableDto));
     }
 
+    @Operation(summary = "List staff accounts by search criteria (Admin only)")
+    @GetMapping("/staff")
+    public ResponseEntity<PageDto<AccountDto>> listStaff(
+            @ParameterObject @Valid PageableDto pageableDto,
+            @Parameter @RequestParam(name = "search", required = false) String search) {
+        return ResponseEntity.ok(accountService.findStaff(search, pageableDto));
+    }
+
     @Operation(summary = "Create account")
     @PostMapping
     public ResponseEntity<AccountDto> createAccount(@RequestBody @Valid AccountCreateRequest request) {
@@ -68,8 +77,15 @@ public class AccountController {
     @Operation(summary = "Update account")
     @PutMapping("/{id}")
     public ResponseEntity<AccountDto> updateAccount(@PathVariable("id") String id,
-                                                    @RequestBody @Valid AccountUpdateRequest request) {
+            @RequestBody @Valid AccountUpdateRequest request) {
         return ResponseEntity.ok(accountService.update(id, request));
+    }
+
+    @Operation(summary = "Assign station to staff")
+    @PutMapping("/{id}/assign-station")
+    public ResponseEntity<AccountDto> assignStation(@PathVariable("id") String id,
+            @RequestBody @Valid StationAssignRequest request) {
+        return ResponseEntity.ok(accountService.assignStation(id, request));
     }
 
     @Operation(summary = "Deactivate account")
