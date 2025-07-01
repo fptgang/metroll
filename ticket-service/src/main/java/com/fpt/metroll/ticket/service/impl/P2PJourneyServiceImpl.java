@@ -16,6 +16,9 @@ import com.fpt.metroll.shared.util.MongoHelper;
 import com.fpt.metroll.shared.util.SecurityUtil;
 import com.google.common.base.Preconditions;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheConfig;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.stereotype.Service;
 
@@ -23,6 +26,7 @@ import java.util.Optional;
 
 @Slf4j
 @Service
+@CacheConfig(cacheNames = "p2p-journeys")
 public class P2PJourneyServiceImpl implements P2PJourneyService {
 
     private final MongoHelper mongoHelper;
@@ -38,6 +42,7 @@ public class P2PJourneyServiceImpl implements P2PJourneyService {
     }
 
     @Override
+    @Cacheable(key = "'findAll:' + (#search != null ? #search : 'null') + ':' + #pageable.page + ':' + #pageable.size + ':' + (#pageable.sort != null ? #pageable.sort : 'null')")
     public PageDto<P2PJourneyDto> findAll(String search, PageableDto pageable) {
         // Anyone can view P2P journeys
         var res = mongoHelper.find(query -> {
@@ -53,18 +58,21 @@ public class P2PJourneyServiceImpl implements P2PJourneyService {
     }
 
     @Override
+    @Cacheable(key = "'findById:' + #id")
     public Optional<P2PJourneyDto> findById(String id) {
         Preconditions.checkNotNull(id, "ID cannot be null");
         return repository.findById(id).map(mapper::toDto);
     }
 
     @Override
+    @Cacheable(key = "'requireById:' + #id")
     public P2PJourneyDto requireById(String id) {
         return findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("P2P journey not found"));
     }
 
     @Override
+    @Cacheable(key = "'findByStations:' + (#startStationId != null ? #startStationId : 'null') + ':' + (#endStationId != null ? #endStationId : 'null') + ':' + #pageable.page + ':' + #pageable.size + ':' + (#pageable.sort != null ? #pageable.sort : 'null')")
     public PageDto<P2PJourneyDto> findByStations( PageableDto pageable, String startStationId, String endStationId) {
        Criteria criteria = new Criteria();
        if ((startStationId!=null && endStationId != null) && (!startStationId.isEmpty() && !endStationId.isEmpty())) {
@@ -87,8 +95,9 @@ public class P2PJourneyServiceImpl implements P2PJourneyService {
     }
 
     @Override
+    @CacheEvict(allEntries = true)
     public P2PJourneyDto create(P2PJourneyCreateRequest request) {
-        if (!SecurityUtil.hasRole(AccountRole.ADMIN, AccountRole.STAFF))
+        if (!SecurityUtil.hasRole(AccountRole.ADMIN))
             throw new NoPermissionException();
 
         Preconditions.checkNotNull(request, "Request cannot be null");
@@ -118,8 +127,9 @@ public class P2PJourneyServiceImpl implements P2PJourneyService {
     }
 
     @Override
+    @CacheEvict(allEntries = true)
     public P2PJourneyDto update(String id, P2PJourneyUpdateRequest request) {
-        if (!SecurityUtil.hasRole(AccountRole.ADMIN, AccountRole.STAFF))
+        if (!SecurityUtil.hasRole(AccountRole.ADMIN))
             throw new NoPermissionException();
 
         Preconditions.checkNotNull(id, "ID cannot be null");
@@ -155,6 +165,7 @@ public class P2PJourneyServiceImpl implements P2PJourneyService {
     }
 
     @Override
+    @CacheEvict(allEntries = true)
     public void delete(String id) {
         if (!SecurityUtil.hasRole(AccountRole.ADMIN))
             throw new NoPermissionException();
