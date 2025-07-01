@@ -15,5 +15,5 @@ public interface OrderClient {
     OrderDto getOrder(@PathVariable("orderId") String orderId);
 
     @GetMapping("/order-details/{orderDetailId}")
-    Map<String, String> getOrderDetail(@PathVariable("orderDetailId") String orderDetailId);
+    OrderDetailDto getOrderDetail(@PathVariable("orderDetailId") String orderDetailId);
 }

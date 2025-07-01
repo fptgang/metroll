@@ -8,6 +8,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 @FeignClient(name = "account-service", contextId = "voucherClient", configuration = com.fpt.metroll.shared.config.FeignClientConfiguration.class)
 public interface VoucherClient {
 
-    @GetMapping("/account/vouchers/{voucherId}")
+    @GetMapping("/vouchers/{voucherId}")
     VoucherDto getVoucher(@PathVariable("voucherId") String voucherId);
 } 

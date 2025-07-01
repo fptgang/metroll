@@ -1,14 +1,18 @@
 package com.fpt.metroll.shared.domain.dto.order;
 
 import com.fpt.metroll.shared.domain.enums.TicketType;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.Instant;
 
 @Builder
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class OrderDetailDto {
     private String id;
     private String orderId;

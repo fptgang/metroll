@@ -18,6 +18,6 @@ public class TicketValidationDto {
     private String ticketId;
     private ValidationType validationType;
     private Instant validationTime;
-    private String deviceId;
+    private String validatorId;
     private Instant createdAt;
 }

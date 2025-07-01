@@ -8,6 +8,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 @FeignClient(name = "account-service", contextId = "accountDiscountPackageClient", configuration = com.fpt.metroll.shared.config.FeignClientConfiguration.class)
 public interface AccountDiscountPackageClient {
 
-    @GetMapping("/account/account-discount-packages/{packageId}")
+    @GetMapping("/account-discount-packages/{packageId}")
     AccountDiscountPackageDto getAccountDiscountPackage(@PathVariable("packageId") String packageId);
 } 
