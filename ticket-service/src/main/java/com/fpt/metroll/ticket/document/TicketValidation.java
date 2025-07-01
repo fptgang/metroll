@@ -25,7 +25,8 @@ public class TicketValidation {
     private String ticketId; // Reference to Ticket
     private ValidationType validationType;
     private Instant validationTime;
-    private String deviceId; // ID of the validation device
+
+    private String validatorId; // Reference to Account
 
     @CreatedDate
     private Instant createdAt;
