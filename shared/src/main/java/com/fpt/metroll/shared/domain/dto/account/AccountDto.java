@@ -15,6 +15,7 @@ public class AccountDto {
     private String phoneNumber;
     private AccountRole role;
     private Boolean active;
+    private String assignedStation;
     private Instant createdAt;
     private Instant updatedAt;
 }

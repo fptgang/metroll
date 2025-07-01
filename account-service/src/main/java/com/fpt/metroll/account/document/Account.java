@@ -32,6 +32,8 @@ public class Account {
     private AccountRole role;
     private Boolean active;
 
+    private String assignedStation;
+
     @CreatedDate
     private Instant createdAt;
 
