@@ -22,6 +22,7 @@ import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
@@ -226,6 +227,23 @@ public class TicketServiceImpl implements TicketService {
         ByteArrayOutputStream os = new ByteArrayOutputStream();
         MatrixToImageWriter.writeToStream(bitMatrix, "PNG", os);
         return Base64.getEncoder().encodeToString(os.toByteArray());
+    }
+
+    /**
+     * Scheduled job to expire tickets whose validUntil is before now and status is VALID
+     */
+    @Scheduled(fixedDelay = 10 * 60 * 1000) // every 10 minutes
+    public void expireTickets() {
+        List<Ticket> toExpire = repository.findByStatusAndValidUntilBefore(TicketStatus.VALID, Instant.now());
+        if (toExpire.isEmpty()) {
+            log.debug("No tickets to expire in this run.");
+            return;
+        }
+        for (Ticket ticket : toExpire) {
+            ticket.setStatus(TicketStatus.EXPIRED);
+        }
+        repository.saveAll(toExpire);
+        log.info("Expired {} tickets in scheduled job.", toExpire.size());
     }
 
 }
