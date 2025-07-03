@@ -6,6 +6,7 @@ import com.fpt.metroll.ticket.document.Ticket;
 import com.fpt.metroll.ticket.domain.mapper.TicketMapper;
 import com.fpt.metroll.ticket.repository.TicketRepository;
 import com.fpt.metroll.ticket.service.TicketService;
+import com.fpt.metroll.ticket.service.FirebaseTicketStatusService;
 import com.fpt.metroll.shared.domain.dto.PageDto;
 import com.fpt.metroll.shared.domain.dto.PageableDto;
 import com.fpt.metroll.shared.domain.dto.ticket.TicketDto;
@@ -40,16 +41,17 @@ public class TicketServiceImpl implements TicketService {
     private final MongoHelper mongoHelper;
     private final TicketMapper mapper;
     private final TicketRepository repository;
+    private final FirebaseTicketStatusService firebaseTicketStatusService;
 
     public TicketServiceImpl(MongoHelper mongoHelper,
             TicketMapper mapper,
-            TicketRepository repository) {
+            TicketRepository repository,
+            FirebaseTicketStatusService firebaseTicketStatusService) {
         this.mongoHelper = mongoHelper;
         this.mapper = mapper;
         this.repository = repository;
+        this.firebaseTicketStatusService = firebaseTicketStatusService;
     }
-
-
 
     @Override
     public PageDto<TicketDto> findAll(String search, PageableDto pageable) {
@@ -101,9 +103,8 @@ public class TicketServiceImpl implements TicketService {
             throw new NoPermissionException();
 
         Preconditions.checkNotNull(orderDetailId, "Order detail ID cannot be null");
-        return mapper.toDto( repository.findByTicketOrderDetailId(orderDetailId).orElseThrow(
-                () -> new IllegalArgumentException("Ticket not found")
-        ));
+        return mapper.toDto(repository.findByTicketOrderDetailId(orderDetailId).orElseThrow(
+                () -> new IllegalArgumentException("Ticket not found")));
     }
 
     @Override
@@ -131,6 +132,13 @@ public class TicketServiceImpl implements TicketService {
 
         ticket.setStatus(status);
         repository.save(ticket);
+
+        // Update Firebase ticket status
+        firebaseTicketStatusService.updateTicketStatusAfterValidation(
+                ticket.getId(),
+                ticket.getTicketType(),
+                ticket.getStatus());
+
         log.info("Updated ticket status: {} to {}", id, status);
     }
 
@@ -138,9 +146,12 @@ public class TicketServiceImpl implements TicketService {
     public TicketDto create(TicketUpsertRequest ticketUpsertRequest) {
 
         Preconditions.checkNotNull(ticketUpsertRequest, "Ticket DTO cannot be null");
-        Preconditions.checkArgument(ticketUpsertRequest.getTicketNumber() != null && !ticketUpsertRequest.getTicketNumber().isBlank(),
+        Preconditions.checkArgument(
+                ticketUpsertRequest.getTicketNumber() != null && !ticketUpsertRequest.getTicketNumber().isBlank(),
                 "Ticket number cannot be null or blank");
-        Preconditions.checkArgument(ticketUpsertRequest.getTicketOrderDetailId() != null && !ticketUpsertRequest.getTicketOrderDetailId().isBlank(),
+        Preconditions.checkArgument(
+                ticketUpsertRequest.getTicketOrderDetailId() != null
+                        && !ticketUpsertRequest.getTicketOrderDetailId().isBlank(),
                 "Order detail ID cannot be null or blank");
 
         // Check if ticket already exists
@@ -160,6 +171,15 @@ public class TicketServiceImpl implements TicketService {
                 .build();
         ticket = repository.save(ticket);
         log.info("Created ticket: {}", ticket.getId());
+
+        // Create ticket status in Firebase
+        firebaseTicketStatusService.createTicketStatus(
+                ticket.getId(),
+                ticket.getTicketType(),
+                ticket.getStatus(),
+                ticket.getValidUntil(),
+                ticket.getTicketOrderDetailId());
+
         return mapper.toDto(ticket);
     }
 
@@ -169,10 +189,11 @@ public class TicketServiceImpl implements TicketService {
         Preconditions.checkArgument(!ticketRequests.isEmpty(), "Ticket requests cannot be empty");
 
         List<Ticket> tickets = new ArrayList<>();
-        
+
         for (TicketUpsertRequest request : ticketRequests) {
             Preconditions.checkNotNull(request, "Ticket request cannot be null");
-            Preconditions.checkArgument(request.getTicketOrderDetailId() != null && !request.getTicketOrderDetailId().isBlank(),
+            Preconditions.checkArgument(
+                    request.getTicketOrderDetailId() != null && !request.getTicketOrderDetailId().isBlank(),
                     "Order detail ID cannot be null or blank");
 
             // Generate unique ticket number if not provided
@@ -196,32 +217,47 @@ public class TicketServiceImpl implements TicketService {
                     .validUntil(request.getValidUntil())
                     .status(request.getStatus() != null ? request.getStatus() : TicketStatus.VALID)
                     .build();
-            
+
             tickets.add(ticket);
         }
 
         // Save all tickets in batch
         List<Ticket> savedTickets = repository.saveAll(tickets);
         log.info("Created {} tickets in batch", savedTickets.size());
-        
+
+        // Create Firebase entries for all tickets
+        for (Ticket savedTicket : savedTickets) {
+            firebaseTicketStatusService.createTicketStatus(
+                    savedTicket.getId(),
+                    savedTicket.getTicketType(),
+                    savedTicket.getStatus(),
+                    savedTicket.getValidUntil(),
+                    savedTicket.getTicketOrderDetailId());
+        }
+
         return savedTickets.stream()
                 .map(mapper::toDto)
                 .collect(Collectors.toList());
     }
 
     private String generateTicketNumber() {
-        return "TKT-" + System.currentTimeMillis() + "-" + (int)(Math.random() * 1000);
+        return "TKT-" + System.currentTimeMillis() + "-" + (int) (Math.random() * 1000);
     }
 
     public String generateQRCodeBase64(String id) throws Exception {
         Ticket ticket = repository.findById(id).orElseThrow(() -> new IllegalArgumentException("Ticket not found"));
 
+        if(ticket.getStatus() != TicketStatus.VALID) {
+            throw new IllegalArgumentException("Ticket is not valid for use. Status: " + ticket.getStatus());
+        }
+
         // Configure ObjectMapper to handle Java 8 date/time types
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
 
-        String content = objectMapper.writeValueAsString(ticket);        int width = 200;
-        int height = 200;
+        String content = objectMapper.writeValueAsString(ticket);
+        int width = 300;
+        int height = 300;
         QRCodeWriter writer = new QRCodeWriter();
         BitMatrix bitMatrix = writer.encode(content, BarcodeFormat.QR_CODE, width, height);
         ByteArrayOutputStream os = new ByteArrayOutputStream();
@@ -230,7 +266,8 @@ public class TicketServiceImpl implements TicketService {
     }
 
     /**
-     * Scheduled job to expire tickets whose validUntil is before now and status is VALID
+     * Scheduled job to expire tickets whose validUntil is before now and status is
+     * VALID
      */
     @Scheduled(fixedDelay = 10 * 60 * 1000) // every 10 minutes
     public void expireTickets() {
