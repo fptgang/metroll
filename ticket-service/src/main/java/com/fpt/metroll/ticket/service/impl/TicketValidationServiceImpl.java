@@ -9,6 +9,7 @@ import com.fpt.metroll.ticket.repository.P2PJourneyRepository;
 import com.fpt.metroll.ticket.repository.TicketRepository;
 import com.fpt.metroll.ticket.repository.TicketValidationRepository;
 import com.fpt.metroll.ticket.service.TicketValidationService;
+import com.fpt.metroll.ticket.service.FirebaseTicketStatusService;
 import com.fpt.metroll.shared.domain.dto.PageDto;
 import com.fpt.metroll.shared.domain.dto.PageableDto;
 import com.fpt.metroll.shared.domain.dto.ticket.TicketValidationDto;
@@ -48,6 +49,7 @@ public class TicketValidationServiceImpl implements TicketValidationService {
     private final AccountClient accountClient;
     private final OrderClient orderClient;
     private final P2PJourneyRepository p2PJourneyRepository;
+    private final FirebaseTicketStatusService firebaseTicketStatusService;
 
     public TicketValidationServiceImpl(MongoHelper mongoHelper,
             TicketValidationMapper mapper,
@@ -55,7 +57,8 @@ public class TicketValidationServiceImpl implements TicketValidationService {
             TicketRepository ticketRepository,
             AccountClient accountClient,
             OrderClient orderClient,
-            P2PJourneyRepository p2PJourneyRepository) {
+            P2PJourneyRepository p2PJourneyRepository,
+            FirebaseTicketStatusService firebaseTicketStatusService) {
         this.mongoHelper = mongoHelper;
         this.mapper = mapper;
         this.repository = repository;
@@ -63,6 +66,7 @@ public class TicketValidationServiceImpl implements TicketValidationService {
         this.accountClient = accountClient;
         this.orderClient = orderClient;
         this.p2PJourneyRepository = p2PJourneyRepository;
+        this.firebaseTicketStatusService = firebaseTicketStatusService;
     }
 
     @Override
@@ -175,6 +179,12 @@ public class TicketValidationServiceImpl implements TicketValidationService {
         // Update ticket status if needed
         updateTicketStatusAfterValidation(ticket, request.getValidationType());
 
+        // Update Firebase ticket status after validation
+        firebaseTicketStatusService.updateTicketStatusAfterValidation(
+                ticket.getId(),
+                ticket.getTicketType(),
+                ticket.getStatus());
+
         log.info("Validated ticket: {} at station: {} with type: {}",
                 request.getTicketId(), stationId, request.getValidationType());
 
@@ -215,7 +225,7 @@ public class TicketValidationServiceImpl implements TicketValidationService {
                         String.format("Entry validation must be at start station. Expected: %s, Got: %s",
                                 p2pJourney.getStartStationId(), stationId));
             }
-            
+
             // must have no validation before
             if (!validations.isEmpty()) {
                 throw new IllegalStateException("The ticket can no longer be validated for ENTRY");
@@ -250,14 +260,15 @@ public class TicketValidationServiceImpl implements TicketValidationService {
         } else {
             // Check alternating pattern: ENTRY -> EXIT -> ENTRY -> EXIT...
             TicketValidation mostRecentValidation = validations.get(0);
-            ValidationType expectedValidationType = mostRecentValidation.getValidationType() == ValidationType.ENTRY 
-                ? ValidationType.EXIT 
-                : ValidationType.ENTRY;
+            ValidationType expectedValidationType = mostRecentValidation.getValidationType() == ValidationType.ENTRY
+                    ? ValidationType.EXIT
+                    : ValidationType.ENTRY;
 
             if (validationType != expectedValidationType) {
                 throw new IllegalStateException(
-                    String.format("Expected validation type: %s, but got: %s. Timed tickets must follow ENTRY-EXIT pattern.", 
-                        expectedValidationType, validationType));
+                        String.format(
+                                "Expected validation type: %s, but got: %s. Timed tickets must follow ENTRY-EXIT pattern.",
+                                expectedValidationType, validationType));
             }
 
             // If expected is EXIT, ensure stationId is different from ENTRY's stationId
@@ -265,7 +276,8 @@ public class TicketValidationServiceImpl implements TicketValidationService {
                 // The most recent validation is ENTRY
                 String entryStationId = mostRecentValidation.getStationId();
                 if (stationId.equals(entryStationId)) {
-                    throw new IllegalStateException("EXIT station must be different from ENTRY station for timed ticket");
+                    throw new IllegalStateException(
+                            "EXIT station must be different from ENTRY station for timed ticket");
                 }
             }
         }
