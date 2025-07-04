@@ -54,7 +54,7 @@ public class VoucherController {
     @Operation(summary = "Update voucher")
     @PutMapping("/{id}")
     public ResponseEntity<VoucherDto> updateVoucher(@PathVariable("id") String id,
-                                                  @RequestBody @Valid VoucherUpdateRequest request) {
+            @RequestBody @Valid VoucherUpdateRequest request) {
         return ResponseEntity.ok(voucherService.update(id, request));
     }
 
@@ -64,4 +64,10 @@ public class VoucherController {
         voucherService.revoke(id);
         return ResponseEntity.noContent().build();
     }
-} 
+
+    @Operation(summary = "Get my vouchers")
+    @GetMapping("/my-vouchers")
+    public ResponseEntity<List<VoucherDto>> getMyVouchers() {
+        return ResponseEntity.ok(voucherService.findMyVouchers());
+    }
+}

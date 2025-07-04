@@ -11,9 +11,16 @@ import java.util.Optional;
 
 public interface VoucherService {
     PageDto<VoucherDto> findAll(String userId, PageableDto pageable);
+
     Optional<VoucherDto> findById(String id);
+
     VoucherDto requireById(String id);
+
     List<VoucherDto> create(VoucherCreateRequest request);
+
     VoucherDto update(String id, VoucherUpdateRequest request);
+
     void revoke(String id);
-} 
+
+    List<VoucherDto> findMyVouchers();
+}
