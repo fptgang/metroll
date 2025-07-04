@@ -16,7 +16,7 @@ public class CheckoutRequest {
     private String paymentMethod; // CASH|VNPAY|PAYOS
     
     // Optional fields for discounts
-    private String discountPackageId; // Reference to AccountDiscountPackage._id
+//    private String discountPackageId; // Reference to AccountDiscountPackage._id
     private String voucherId; // Reference to Voucher._id
     
     // For offline purchases by staff

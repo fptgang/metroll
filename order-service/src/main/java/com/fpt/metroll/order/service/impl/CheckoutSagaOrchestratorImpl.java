@@ -255,7 +255,7 @@ public class CheckoutSagaOrchestratorImpl implements CheckoutSagaOrchestrator {
             case CALCULATE_PRICING -> payload.put("validatedItems", sagaData.getValidatedItems());
             case APPLY_DISCOUNTS -> {
                 payload.put("baseTotal", sagaData.getBaseTotal());
-                payload.put("discountPackageId", sagaData.getOriginalRequest().getDiscountPackageId());
+//                payload.put("discountPackageId", sagaData.getOriginalRequest().getDiscountPackageId());
                 payload.put("voucherId", sagaData.getOriginalRequest().getVoucherId());
             }
             case CREATE_ORDER -> {
@@ -283,7 +283,7 @@ public class CheckoutSagaOrchestratorImpl implements CheckoutSagaOrchestrator {
             case CANCEL_PAYMENT -> payload.put("paymentId", sagaData.getPaymentId());
             case CANCEL_ORDER -> payload.put("orderId", sagaData.getOrderId());
             case RELEASE_DISCOUNTS -> {
-                payload.put("discountPackageId", sagaData.getOriginalRequest().getDiscountPackageId());
+//                payload.put("discountPackageId", sagaData.getOriginalRequest().getDiscountPackageId());
                 payload.put("voucherId", sagaData.getOriginalRequest().getVoucherId());
             }
             case CLEANUP_ITEMS -> payload.put("validatedItems", sagaData.getValidatedItems());
