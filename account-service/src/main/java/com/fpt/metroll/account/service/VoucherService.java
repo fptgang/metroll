@@ -22,5 +22,7 @@ public interface VoucherService {
 
     void revoke(String id);
 
+    void use(String id);
+
     List<VoucherDto> findMyVouchers();
 }

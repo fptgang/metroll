@@ -20,4 +20,6 @@ public interface AccountDiscountPackageService {
     void unassign(String id);
 
     AccountDiscountPackageDto findMyActivatedDiscounts();
+
+    Float findMyDiscountPercentage();
 }

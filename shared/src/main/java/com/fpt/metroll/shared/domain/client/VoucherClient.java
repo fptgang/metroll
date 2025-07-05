@@ -4,6 +4,8 @@ import com.fpt.metroll.shared.domain.dto.voucher.VoucherDto;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 
 import java.util.List;
 
@@ -15,4 +17,7 @@ public interface VoucherClient {
 
     @GetMapping("/vouchers/my-vouchers")
     List<VoucherDto> getMyVouchers();
+
+    @PutMapping("/vouchers/{voucherId}/use")
+    void use(@PathVariable("voucherId") String voucherId);
 }
