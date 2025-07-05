@@ -192,4 +192,14 @@ public class AccountDiscountPackageServiceImpl implements AccountDiscountPackage
 
         return accountDiscountPackageMapper.toDto(activatedDiscount.orElse(null));
     }
+
+    @Override
+    public Float findMyDiscountPercentage() {
+        AccountDiscountPackageDto accountDiscountPackageDto = findMyActivatedDiscounts();
+        if (accountDiscountPackageDto != null) {
+            DiscountPackage discountPackage = discountPackageRepository.findById(accountDiscountPackageDto.getDiscountPackageId()).orElse(null);
+            return discountPackage != null ? discountPackage.getDiscountPercentage() : null;
+        }
+        return null;
+    }
 }

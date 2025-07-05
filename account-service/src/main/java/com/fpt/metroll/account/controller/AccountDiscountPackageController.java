@@ -64,4 +64,10 @@ public class AccountDiscountPackageController {
     public ResponseEntity<AccountDiscountPackageDto> getMyActivatedDiscounts() {
         return ResponseEntity.ok(accountDiscountPackageService.findMyActivatedDiscounts());
     }
+
+    @Operation(summary = "Get my discount percentage")
+    @GetMapping("/my-discount-percentage")
+    public ResponseEntity<Float> getMyDiscountPercentage() {
+        return ResponseEntity.ok(accountDiscountPackageService.findMyDiscountPercentage());
+    }
 }

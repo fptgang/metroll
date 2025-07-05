@@ -189,6 +189,23 @@ public class VoucherServiceImpl implements VoucherService {
     }
 
     @Override
+    public void use(String id) {
+        if (!SecurityUtil.hasRole(AccountRole.CUSTOMER))
+            throw new NoPermissionException();
+        Voucher voucher = voucherRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Voucher not found"));
+
+        if(!voucher.getOwnerId().equals(SecurityUtil.requireUserId()))
+            throw new NoPermissionException();
+
+        if (voucher.getStatus() != VoucherStatus.VALID)
+            throw new IllegalStateException("Can only use VALID vouchers");
+
+        voucher.setStatus(VoucherStatus.USED);
+        voucherRepository.save(voucher);
+    }
+
+    @Override
     public List<VoucherDto> findMyVouchers() {
         String currentUserId = SecurityUtil.requireUserId();
 

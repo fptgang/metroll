@@ -188,6 +188,10 @@ public class OrderServiceImpl implements OrderService {
 
         log.info("Created order {} for customer {} with staff {} and final total {}",
                 order.getId(), customerId, staffId, finalTotal);
+        //Mark voucher as used
+        if (checkoutRequest.getVoucherId() != null && !checkoutRequest.getVoucherId().isEmpty()) {
+            voucherClient.use(checkoutRequest.getVoucherId());
+        }
         return convertToDto(order);
     }
 
@@ -425,7 +429,7 @@ public class OrderServiceImpl implements OrderService {
         }
 
         // Apply voucher if provided
-        if (checkoutRequest.getVoucherId() != null) {
+        if (checkoutRequest.getVoucherId() != null && !checkoutRequest.getVoucherId().isEmpty()) {
             try {
                 VoucherDto voucher = voucherClient.getVoucher(checkoutRequest.getVoucherId());
                 BigDecimal voucherDiscount = calculateVoucherDiscount(voucher, baseTotal);
@@ -440,7 +444,7 @@ public class OrderServiceImpl implements OrderService {
 
     private BigDecimal calculateDiscountPackageDiscount(AccountDiscountPackageDto accountDiscountPackageDto,
             BigDecimal baseTotal) {
-        DiscountPackageDto discountPackageDto = discountPackageClient.getDiscountPackage(accountDiscountPackageDto.getId());
+        DiscountPackageDto discountPackageDto = discountPackageClient.getDiscountPackage(accountDiscountPackageDto.getDiscountPackageId());
         return baseTotal.multiply(BigDecimal.valueOf(discountPackageDto.getDiscountPercentage()));
     }
 
