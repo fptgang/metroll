@@ -8,11 +8,13 @@ import com.fpt.metroll.order.repository.OrderDetailRepository;
 import com.fpt.metroll.order.service.OrderService;
 import com.fpt.metroll.order.service.PayOSService;
 import com.fpt.metroll.shared.domain.client.AccountDiscountPackageClient;
+import com.fpt.metroll.shared.domain.client.DiscountPackageClient;
 import com.fpt.metroll.shared.domain.client.TicketClient;
 import com.fpt.metroll.shared.domain.client.VoucherClient;
 import com.fpt.metroll.shared.domain.dto.PageDto;
 import com.fpt.metroll.shared.domain.dto.PageableDto;
 import com.fpt.metroll.shared.domain.dto.discount.AccountDiscountPackageDto;
+import com.fpt.metroll.shared.domain.dto.discount.DiscountPackageDto;
 import com.fpt.metroll.shared.domain.dto.order.CheckoutItemRequest;
 import com.fpt.metroll.shared.domain.dto.order.CheckoutRequest;
 import com.fpt.metroll.shared.domain.dto.order.OrderDto;
@@ -55,14 +57,15 @@ public class OrderServiceImpl implements OrderService {
     private final VoucherClient voucherClient;
     private final AccountDiscountPackageClient accountDiscountPackageClient;
     private final PayOSService payOSService;
+    private final DiscountPackageClient discountPackageClient;
 
     public OrderServiceImpl(OrderRepository orderRepository,
-            OrderDetailRepository orderDetailRepository,
-            OrderMapper orderMapper,
-            TicketClient ticketClient,
-            VoucherClient voucherClient,
-            AccountDiscountPackageClient accountDiscountPackageClient,
-            PayOSService payOSService) {
+                            OrderDetailRepository orderDetailRepository,
+                            OrderMapper orderMapper,
+                            TicketClient ticketClient,
+                            VoucherClient voucherClient,
+                            AccountDiscountPackageClient accountDiscountPackageClient,
+                            PayOSService payOSService, DiscountPackageClient discountPackageClient) {
         this.orderRepository = orderRepository;
         this.orderDetailRepository = orderDetailRepository;
         this.orderMapper = orderMapper;
@@ -70,6 +73,7 @@ public class OrderServiceImpl implements OrderService {
         this.voucherClient = voucherClient;
         this.accountDiscountPackageClient = accountDiscountPackageClient;
         this.payOSService = payOSService;
+        this.discountPackageClient = discountPackageClient;
     }
 
     @Override
@@ -86,6 +90,8 @@ public class OrderServiceImpl implements OrderService {
 
         // Expand checkout items
         checkoutRequest = expandCheckoutItemsByQuantity(checkoutRequest);
+
+        AccountDiscountPackageDto accountDiscountPackageDto = accountDiscountPackageClient.getMyActivatedDiscount();
 
         // Determine if this is a staff purchase
         boolean isStaffPurchase = SecurityUtil.hasRole(AccountRole.STAFF, AccountRole.ADMIN) &&
@@ -141,7 +147,7 @@ public class OrderServiceImpl implements OrderService {
         }
 
         // Calculate discounts
-        BigDecimal totalDiscountAmount = calculateDiscounts(checkoutRequest, baseTotal);
+        BigDecimal totalDiscountAmount = calculateDiscounts(checkoutRequest, baseTotal, accountDiscountPackageDto);
 
         // Distribute discount proportionally across order details
         distributeDiscount(orderDetails, totalDiscountAmount, baseTotal);
@@ -152,7 +158,7 @@ public class OrderServiceImpl implements OrderService {
         Order order = Order.builder()
                 .staffId(staffId)
                 .customerId(customerId)
-                .discountPackage(checkoutRequest.getDiscountPackageId())
+                .discountPackage(accountDiscountPackageDto.getDiscountPackageId())
                 .voucher(checkoutRequest.getVoucherId())
                 .baseTotal(baseTotal)
                 .discountTotal(totalDiscountAmount)
@@ -404,19 +410,17 @@ public class OrderServiceImpl implements OrderService {
         return Instant.now().plus(1, ChronoUnit.DAYS);
     }
 
-    private BigDecimal calculateDiscounts(CheckoutRequest checkoutRequest, BigDecimal baseTotal) {
+    private BigDecimal calculateDiscounts(CheckoutRequest checkoutRequest, BigDecimal baseTotal, AccountDiscountPackageDto accountDiscountPackageDto) {
         BigDecimal totalDiscountAmount = BigDecimal.ZERO;
 
         // Apply discount package if provided
-        if (checkoutRequest.getDiscountPackageId() != null) {
+        if ( accountDiscountPackageDto != null && accountDiscountPackageDto.getDiscountPackageId() != null) {
             try {
-                AccountDiscountPackageDto discountPackage = accountDiscountPackageClient
-                        .getAccountDiscountPackage(checkoutRequest.getDiscountPackageId());
-                BigDecimal packageDiscount = calculateDiscountPackageDiscount(discountPackage, baseTotal);
+                BigDecimal packageDiscount = calculateDiscountPackageDiscount(accountDiscountPackageDto, baseTotal);
                 totalDiscountAmount = totalDiscountAmount.add(packageDiscount);
             } catch (Exception e) {
                 log.warn("Failed to apply discount package {}: {}",
-                        checkoutRequest.getDiscountPackageId(), e.getMessage());
+                        accountDiscountPackageDto.getDiscountPackageId(), e.getMessage());
             }
         }
 
@@ -434,12 +438,10 @@ public class OrderServiceImpl implements OrderService {
         return totalDiscountAmount;
     }
 
-    private BigDecimal calculateDiscountPackageDiscount(AccountDiscountPackageDto discountPackage,
+    private BigDecimal calculateDiscountPackageDiscount(AccountDiscountPackageDto accountDiscountPackageDto,
             BigDecimal baseTotal) {
-        // This is a simplified calculation - in real implementation,
-        // you would fetch the discount package details and apply the specific rules
-        // For now, assume a 10% discount
-        return baseTotal.multiply(BigDecimal.valueOf(0.10));
+        DiscountPackageDto discountPackageDto = discountPackageClient.getDiscountPackage(accountDiscountPackageDto.getId());
+        return baseTotal.multiply(BigDecimal.valueOf(discountPackageDto.getDiscountPercentage()));
     }
 
     private BigDecimal calculateVoucherDiscount(VoucherDto voucher, BigDecimal baseTotal) {
@@ -514,7 +516,6 @@ public class OrderServiceImpl implements OrderService {
         return CheckoutRequest.builder()
                 .items(expandedItems)
                 .paymentMethod(originalRequest.getPaymentMethod())
-                .discountPackageId(originalRequest.getDiscountPackageId())
                 .voucherId(originalRequest.getVoucherId())
                 .customerId(originalRequest.getCustomerId())
                 .build();

@@ -28,6 +28,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.List;
 
 @Slf4j
 @Service
@@ -40,10 +41,10 @@ public class AccountDiscountPackageServiceImpl implements AccountDiscountPackage
     private final DiscountPackageRepository discountPackageRepository;
 
     public AccountDiscountPackageServiceImpl(MongoHelper mongoHelper,
-                                           AccountDiscountPackageMapper accountDiscountPackageMapper,
-                                           AccountDiscountPackageRepository accountDiscountPackageRepository,
-                                           AccountRepository accountRepository,
-                                           DiscountPackageRepository discountPackageRepository) {
+            AccountDiscountPackageMapper accountDiscountPackageMapper,
+            AccountDiscountPackageRepository accountDiscountPackageRepository,
+            AccountRepository accountRepository,
+            DiscountPackageRepository discountPackageRepository) {
         this.mongoHelper = mongoHelper;
         this.accountDiscountPackageMapper = accountDiscountPackageMapper;
         this.accountDiscountPackageRepository = accountDiscountPackageRepository;
@@ -173,11 +174,22 @@ public class AccountDiscountPackageServiceImpl implements AccountDiscountPackage
 
         // Check if the discount package is ongoing
         if (accountDiscountPackage.getStatus() != AccountDiscountStatus.ACTIVATED ||
-            accountDiscountPackage.getValidUntil().isBefore(Instant.now())) {
+                accountDiscountPackage.getValidUntil().isBefore(Instant.now())) {
             throw new IllegalStateException("Can only unassign ongoing discount packages");
         }
 
         accountDiscountPackage.setStatus(AccountDiscountStatus.CANCELLED);
         accountDiscountPackageRepository.save(accountDiscountPackage);
     }
-} 
+
+    @Override
+    public AccountDiscountPackageDto findMyActivatedDiscounts() {
+        String currentUserId = SecurityUtil.requireUserId();
+        Instant now = Instant.now();
+
+        Optional<AccountDiscountPackage> activatedDiscount = accountDiscountPackageRepository
+                .findByAccountIdAndStatusAndValidUntilAfter(currentUserId, AccountDiscountStatus.ACTIVATED, now);
+
+        return accountDiscountPackageMapper.toDto(activatedDiscount.orElse(null));
+    }
+}

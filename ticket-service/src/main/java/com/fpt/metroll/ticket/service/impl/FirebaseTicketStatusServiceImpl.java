@@ -48,23 +48,6 @@ public class FirebaseTicketStatusServiceImpl implements FirebaseTicketStatusServ
             ticketData.put("status", firebaseStatus.name());
             ticketData.put("validUntil", validUntil != null ? validUntil.toString() : null);
 
-            // Add P2P journey information if ticket type is P2P
-            if (ticketType == TicketType.P2P && orderDetailId != null) {
-                try {
-                    OrderDetailDto orderDetail = orderClient.getOrderDetail(orderDetailId);
-                    if (orderDetail.getP2pJourney() != null) {
-                        P2PJourney p2pJourney = p2PJourneyRepository.findById(orderDetail.getP2pJourney())
-                                .orElse(null);
-                        if (p2pJourney != null) {
-                            ticketData.put("startStationId", p2pJourney.getStartStationId());
-                            ticketData.put("endStationId", p2pJourney.getEndStationId());
-                        }
-                    }
-                } catch (Exception e) {
-                    log.warn("Failed to fetch P2P journey info for ticket: {}", ticketId, e);
-                }
-            }
-
             database.child(TICKETS_PATH).child(ticketId).setValueAsync(ticketData);
 
             log.info("Created ticket status in Firebase: {} with type: {} and status: {}", ticketId, ticketType,

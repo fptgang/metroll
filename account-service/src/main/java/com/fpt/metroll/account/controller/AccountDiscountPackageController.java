@@ -15,6 +15,8 @@ import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @Slf4j
 @RestController
 @RequestMapping("/account-discount-packages")
@@ -39,7 +41,8 @@ public class AccountDiscountPackageController {
 
     @Operation(summary = "Assign discount package to account")
     @PostMapping("/assign")
-    public ResponseEntity<AccountDiscountPackageDto> assignDiscountPackage(@RequestBody @Valid AccountDiscountAssignRequest request) {
+    public ResponseEntity<AccountDiscountPackageDto> assignDiscountPackage(
+            @RequestBody @Valid AccountDiscountAssignRequest request) {
         return ResponseEntity.ok(accountDiscountPackageService.assign(request));
     }
 
@@ -55,4 +58,10 @@ public class AccountDiscountPackageController {
         accountDiscountPackageService.unassign(id);
         return ResponseEntity.noContent().build();
     }
-} 
+
+    @Operation(summary = "Get my activated discount packages")
+    @GetMapping("/my-discount")
+    public ResponseEntity<AccountDiscountPackageDto> getMyActivatedDiscounts() {
+        return ResponseEntity.ok(accountDiscountPackageService.findMyActivatedDiscounts());
+    }
+}

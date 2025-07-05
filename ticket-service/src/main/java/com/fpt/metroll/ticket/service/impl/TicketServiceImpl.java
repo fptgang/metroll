@@ -1,9 +1,14 @@
 package com.fpt.metroll.ticket.service.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fpt.metroll.shared.domain.client.OrderClient;
+import com.fpt.metroll.shared.domain.dto.order.OrderDetailDto;
 import com.fpt.metroll.shared.domain.dto.ticket.TicketUpsertRequest;
+import com.fpt.metroll.shared.domain.enums.TicketType;
+import com.fpt.metroll.ticket.document.P2PJourney;
 import com.fpt.metroll.ticket.document.Ticket;
 import com.fpt.metroll.ticket.domain.mapper.TicketMapper;
+import com.fpt.metroll.ticket.repository.P2PJourneyRepository;
 import com.fpt.metroll.ticket.repository.TicketRepository;
 import com.fpt.metroll.ticket.service.TicketService;
 import com.fpt.metroll.ticket.service.FirebaseTicketStatusService;
@@ -17,6 +22,8 @@ import com.fpt.metroll.shared.exception.NoPermissionException;
 import com.fpt.metroll.shared.util.MongoHelper;
 import com.fpt.metroll.shared.util.SecurityUtil;
 import com.google.common.base.Preconditions;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.client.j2se.MatrixToImageWriter;
 import com.google.zxing.common.BitMatrix;
@@ -28,29 +35,34 @@ import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Base64;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
 @Service
 public class TicketServiceImpl implements TicketService {
+    
+    private static final String TICKETS_PATH = "tickets";
 
     private final MongoHelper mongoHelper;
     private final TicketMapper mapper;
     private final TicketRepository repository;
     private final FirebaseTicketStatusService firebaseTicketStatusService;
+    private final OrderClient orderClient;
+    private final P2PJourneyRepository p2PJourneyRepository;
+    private final DatabaseReference database;
 
     public TicketServiceImpl(MongoHelper mongoHelper,
-            TicketMapper mapper,
-            TicketRepository repository,
-            FirebaseTicketStatusService firebaseTicketStatusService) {
+                             TicketMapper mapper,
+                             TicketRepository repository,
+                             FirebaseTicketStatusService firebaseTicketStatusService, OrderClient orderClient, P2PJourneyRepository p2PJourneyRepository) {
         this.mongoHelper = mongoHelper;
+        this.database = FirebaseDatabase.getInstance().getReference();
         this.mapper = mapper;
         this.repository = repository;
         this.firebaseTicketStatusService = firebaseTicketStatusService;
+        this.orderClient = orderClient;
+        this.p2PJourneyRepository = p2PJourneyRepository;
     }
 
     @Override
@@ -262,6 +274,27 @@ public class TicketServiceImpl implements TicketService {
         BitMatrix bitMatrix = writer.encode(content, BarcodeFormat.QR_CODE, width, height);
         ByteArrayOutputStream os = new ByteArrayOutputStream();
         MatrixToImageWriter.writeToStream(bitMatrix, "PNG", os);
+        
+        // Update Firebase ticket status
+        
+        Map<String, Object> ticketData = new HashMap<>();
+        if (ticket.getTicketType() == TicketType.P2P && ticket.getTicketOrderDetailId() != null) {
+            try {
+                OrderDetailDto orderDetail = orderClient.getOrderDetail(ticket.getTicketOrderDetailId());
+                if (orderDetail.getP2pJourney() != null) {
+                    P2PJourney p2pJourney = p2PJourneyRepository.findById(orderDetail.getP2pJourney())
+                            .orElse(null);
+                    if (p2pJourney != null) {
+                        ticketData.put("startStationId", p2pJourney.getStartStationId());
+                        ticketData.put("endStationId", p2pJourney.getEndStationId());
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("Failed to fetch P2P journey info for ticket: {}", ticket.getId(), e);
+            }
+        }
+        database.child(TICKETS_PATH).child(ticket.getId()).updateChildrenAsync(ticketData);
+
         return Base64.getEncoder().encodeToString(os.toByteArray());
     }
 
