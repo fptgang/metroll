@@ -102,6 +102,17 @@ public class AccountDiscountPackageServiceImpl implements AccountDiscountPackage
     }
 
     @Override
+    public AccountDiscountPackageDto getByAccountId(String id) {
+        if(!SecurityUtil.hasRole(AccountRole.ADMIN)||!SecurityUtil.requireUserId().equals(id)) 
+            throw new NoPermissionException();
+        return accountDiscountPackageRepository.findByAccountIdAndStatusAndValidUntilAfter(
+                id, AccountDiscountStatus.ACTIVATED, Instant.now()
+        ).map(accountDiscountPackageMapper::toDto).orElse(
+                null
+        );
+    }
+
+    @Override
     public AccountDiscountPackageDto assign(AccountDiscountAssignRequest request) {
         if (!SecurityUtil.hasRole(AccountRole.STAFF))
             throw new NoPermissionException();

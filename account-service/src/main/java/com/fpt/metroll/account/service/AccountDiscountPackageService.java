@@ -22,4 +22,6 @@ public interface AccountDiscountPackageService {
     AccountDiscountPackageDto findMyActivatedDiscounts();
 
     Float findMyDiscountPercentage();
+
+    AccountDiscountPackageDto getByAccountId(String id);
 }
