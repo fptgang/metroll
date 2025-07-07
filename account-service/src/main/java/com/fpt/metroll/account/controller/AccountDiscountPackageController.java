@@ -49,6 +49,12 @@ public class AccountDiscountPackageController {
     @Operation(summary = "Get account discount package by ID")
     @GetMapping("/{id}")
     public ResponseEntity<AccountDiscountPackageDto> getAccountDiscountPackageById(@PathVariable("id") String id) {
+        return ResponseEntity.ok(accountDiscountPackageService.getByAccountId(id));
+    }
+
+    @Operation(summary = "Get account discount package by ID")
+    @GetMapping("/account/{id}")
+    public ResponseEntity<AccountDiscountPackageDto> getAccountDiscountPackageByAccountId(@PathVariable("id") String id) {
         return ResponseEntity.ok(accountDiscountPackageService.requireById(id));
     }
 
@@ -63,5 +69,11 @@ public class AccountDiscountPackageController {
     @GetMapping("/my-discount")
     public ResponseEntity<AccountDiscountPackageDto> getMyActivatedDiscounts() {
         return ResponseEntity.ok(accountDiscountPackageService.findMyActivatedDiscounts());
+    }
+
+    @Operation(summary = "Get my discount percentage")
+    @GetMapping("/my-discount-percentage")
+    public ResponseEntity<Float> getMyDiscountPercentage() {
+        return ResponseEntity.ok(accountDiscountPackageService.findMyDiscountPercentage());
     }
 }

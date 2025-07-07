@@ -65,6 +65,13 @@ public class VoucherController {
         return ResponseEntity.noContent().build();
     }
 
+    @Operation(summary = "Use voucher")
+    @PutMapping("/{id}/use")
+    public ResponseEntity<Void> useVoucher(@PathVariable("id") String id) {
+        voucherService.use(id);
+        return ResponseEntity.noContent().build();
+    }
+
     @Operation(summary = "Get my vouchers")
     @GetMapping("/my-vouchers")
     public ResponseEntity<List<VoucherDto>> getMyVouchers() {
