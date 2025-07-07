@@ -41,7 +41,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 public class TicketServiceImpl implements TicketService {
-    
+
     private static final String TICKETS_PATH = "tickets";
 
     private final MongoHelper mongoHelper;
@@ -259,7 +259,7 @@ public class TicketServiceImpl implements TicketService {
     public String generateQRCodeBase64(String id) throws Exception {
         Ticket ticket = repository.findById(id).orElseThrow(() -> new IllegalArgumentException("Ticket not found"));
 
-        if(ticket.getStatus() != TicketStatus.VALID) {
+        if (ticket.getStatus() != TicketStatus.VALID) {
             throw new IllegalArgumentException("Ticket is not valid for use. Status: " + ticket.getStatus());
         }
 
@@ -274,9 +274,9 @@ public class TicketServiceImpl implements TicketService {
         BitMatrix bitMatrix = writer.encode(content, BarcodeFormat.QR_CODE, width, height);
         ByteArrayOutputStream os = new ByteArrayOutputStream();
         MatrixToImageWriter.writeToStream(bitMatrix, "PNG", os);
-        
+
         // Update Firebase ticket status
-        
+
         Map<String, Object> ticketData = new HashMap<>();
         if (ticket.getTicketType() == TicketType.P2P && ticket.getTicketOrderDetailId() != null) {
             try {
@@ -311,6 +311,11 @@ public class TicketServiceImpl implements TicketService {
         }
         for (Ticket ticket : toExpire) {
             ticket.setStatus(TicketStatus.EXPIRED);
+            // Update Firebase ticket status
+
+            Map<String, Object> ticketData = new HashMap<>();
+            ticketData.put("status", "EXPIRED");
+            database.child(TICKETS_PATH).child(ticket.getId()).updateChildrenAsync(ticketData);
         }
         repository.saveAll(toExpire);
         log.info("Expired {} tickets in scheduled job.", toExpire.size());
