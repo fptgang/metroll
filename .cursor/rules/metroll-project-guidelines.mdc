@@ -1,0 +1,306 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# MetRoll Project Development Guidelines
+
+## Project Overview
+MetRoll is a metro ticketing system built with Java Spring Boot Cloud microservices architecture.
+
+## Module Organization
+
+### Core Components
+- **config-server**: Centralized configuration using Spring Cloud Config Server
+- **service-registry**: Service discovery using Spring Cloud Netflix Eureka  
+- **api-gateway**: Request routing and authorization gateway
+
+### Business Services
+- **account-service**: User account management
+- **ticket-service**: Ticket operations and validation
+- **subway-service**: Metro line and station management
+- **order-service**: Order processing and payments
+- **shared**: Common DTOs, utilities, and cross-service components
+
+## Code Placement Rules
+
+### Shared vs Service-Specific Code
+```java
+// Shared across services (put in com.fpt.metroll.shared)
+- Spring OpenFeign Clients
+- DTOs used by multiple services
+- Enums shared across services
+- Mappers for shared DTOs
+- Common exceptions
+
+// Service-specific (put in com.fpt.metroll.<service>)
+- Controllers
+- Documents (MongoDB entities)
+- Service implementations
+- Repositories
+- Service-specific DTOs and mappers
+```
+
+## Security Patterns
+
+### Using SecurityUtil
+Reference: [SecurityUtil.java](mdc:shared/src/main/java/com/fpt/metroll/shared/util/SecurityUtil.java)
+
+```java
+// Authentication checks
+String userId = SecurityUtil.requireUserId();        // Throws if not authenticated
+String userId = SecurityUtil.getUserId();           // Returns null if not authenticated
+AccountRole role = SecurityUtil.requireUserRole();  // Throws if not authenticated
+String email = SecurityUtil.requireUserEmail();     // Throws if not authenticated
+
+// Role-based access
+if (SecurityUtil.hasRole(AccountRole.ADMIN)) {
+    // Admin-only logic
+}
+
+// Temporary elevation
+SecurityUtil.elevate(() -> {
+    // Execute with elevated permissions
+});
+```
+
+### Permission Handling
+```java
+// Use NoPermissionException for authorization failures
+if (!hasPermission) {
+    throw new NoPermissionException("User lacks required permission");
+}
+```
+
+## Database Patterns
+
+### MongoDB Documents
+```java
+@Document(collection = "accounts")
+public class Account {
+    @Id
+    private String id;
+    
+    @CreatedDate
+    private Instant createdAt;
+    
+    @LastModifiedDate  
+    private Instant updatedAt;
+    
+    // Use BigDecimal for monetary fields
+    @Field(targetType = FieldType.DECIMAL128)
+    private BigDecimal balance;
+    
+    // Prefer enums over strings
+    private AccountRole role;
+}
+```
+
+### Pagination with MongoHelper
+Reference: [MongoHelper.java](mdc:shared/src/main/java/com/fpt/metroll/shared/util/MongoHelper.java)
+
+```java
+var result = mongoHelper.find(query -> {
+    // Add search criteria
+    if (search != null && !search.isBlank()) {
+        Criteria criteria = new Criteria().orOperator(
+            Criteria.where("name").regex(search, "i"),
+            Criteria.where("email").regex(search, "i")
+        );
+        query.addCriteria(criteria);
+    }
+    
+    // Role-based filtering
+    if (SecurityUtil.hasRole(AccountRole.STAFF)) {
+        query.addCriteria(Criteria.where("role").is(AccountRole.CUSTOMER.name()));
+    }
+    
+    return query;
+}, pageable, Account.class).map(mapper::toDto);
+
+return PageMapper.INSTANCE.toPageDTO(result);
+```
+
+## DTO and Mapping Patterns
+
+### DTO Naming Conventions
+```java
+// Request DTOs (incoming)
+AccountCreateRequest
+AccountUpdateRequest
+
+// Response DTOs (outgoing)  
+AccountDto
+AccountSummaryDto
+```
+
+### MapStruct Mappers
+```java
+@Mapper(componentModel = "spring")
+public interface AccountMapper {
+    AccountDto toDto(Account account);
+    Account toDocument(AccountCreateRequest request);
+}
+
+// With decorators for conditional responses
+@Mapper(componentModel = "spring", uses = {AnswerOptionMapper.class})
+@DecoratedWith(AccountMapperDecorator.class)
+public interface AccountMapper {
+    AccountDto toDto(Account account);
+}
+```
+
+### Decorator Pattern for Conditional Responses
+```java
+@Component
+public abstract class AccountMapperDecorator implements AccountMapper {
+    @Autowired
+    private AccountMapper delegate;
+
+    @Override
+    public AccountDto toDto(Account account) {
+        AccountDto dto = delegate.toDto(account);
+        
+        // Conditional logic based on user role
+        if (!SecurityUtil.hasRole(AccountRole.ADMIN)) {
+            dto.setSensitiveField(null);
+        }
+        
+        return dto;
+    }
+}
+```
+
+## Cross-Service Communication
+
+### OpenFeign Clients
+Place in: `com.fpt.metroll.shared.domain.client`
+
+```java
+@FeignClient(name = "account-service")
+public interface AccountClient {
+    @GetMapping("/accounts/{id}")
+    AccountDto getAccount(@PathVariable String id);
+}
+```
+
+## Service Layer Patterns
+
+### Input Validation
+```java
+@Service
+public class AccountServiceImpl implements AccountService {
+    
+    public AccountDto createAccount(AccountCreateRequest request) {
+        // Use Guava Preconditions for simple validation
+        Preconditions.checkArgument(
+            StringUtils.isNotBlank(request.getEmail()), 
+            "Email cannot be blank"
+        );
+        
+        // Manual security checks with NoPermissionException
+        if (!SecurityUtil.hasRole(AccountRole.ADMIN)) {
+            throw new NoPermissionException("Only admins can create accounts");
+        }
+        
+        // Business logic...
+    }
+}
+```
+
+### Transactions
+```java
+@Transactional
+public void updateMultipleEntities() {
+    // Use when modifying multiple repositories
+    accountRepository.save(account);
+    orderRepository.save(order);
+}
+```
+
+## Configuration Management
+
+### Centralized Configuration
+All configuration files go in: `config-server/src/main/resources/config/`
+
+Example files:
+- [account-service.yml](mdc:config-server/src/main/resources/config/account-service.yml)
+- [api-gateway.yml](mdc:config-server/src/main/resources/config/api-gateway.yml)
+
+## Technology Stack
+
+### Core Technologies
+- Spring Cloud Streams with RabbitMQ for messaging
+- Spring Data MongoDB for data persistence
+- Spring Cloud OpenFeign for service communication
+- Spring Security for authentication/authorization
+
+### Utility Libraries
+- Apache Commons Lang 3 for string/collection utilities
+- Google Guava for advanced collections and utilities
+- MapStruct for object mapping
+- Lombok for boilerplate reduction
+
+## Logging Standards
+
+```java
+@Slf4j
+@Service
+public class AccountService {
+    
+    public void processAccount(String accountId) {
+        try {
+            // Business logic
+            log.info("Account processed successfully: {}", accountId);
+        } catch (Exception e) {
+            log.error("Failed to process account: {}", accountId, e);
+            throw e;
+        }
+    }
+}
+```
+
+## Monetary Fields
+
+```java
+// Always use BigDecimal for monetary values
+@Field(targetType = FieldType.DECIMAL128)
+private BigDecimal amount;
+
+// Never use double or float for money
+```
+
+## Project Structure Reference
+
+```
+metroll/
+├── config-server/          # Centralized configuration
+├── service-registry/       # Eureka service discovery  
+├── api-gateway/           # Request routing & auth
+├── shared/                # Cross-service components
+├── account-service/       # User management
+├── ticket-service/        # Ticket operations
+├── subway-service/        # Metro infrastructure
+└── order-service/         # Payment processing
+```
+
+## Development Workflow
+
+1. **New Feature Development**
+   - Determine if code should be shared or service-specific
+   - Place DTOs and clients in shared module if cross-service
+   - Implement security checks using SecurityUtil
+   - Use MapStruct for object mapping
+   - Add configuration to config-server if needed
+
+2. **API Development**
+   - Controllers expose endpoints through api-gateway
+   - Use consistent DTO naming conventions
+   - Implement proper error handling
+   - Add role-based access control
+
+3. **Database Operations**
+   - Use MongoHelper for complex queries with pagination
+   - Implement proper indexing strategies
+   - Use BigDecimal for monetary fields
+   - Add audit fields (createdAt, updatedAt)

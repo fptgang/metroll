@@ -14,10 +14,11 @@ public interface OrderMapper {
 
     OrderDto toDto(Order order);
     
-    @Mapping(target = "ticketOrderId", ignore = true)
+    @Mapping(target = "orderId", ignore = true)
     OrderDetailDto toDetailDto(OrderDetail orderDetail);
     
     Order toEntity(OrderDto orderDto);
     
+    @Mapping(target = "order", ignore = true)
     OrderDetail toDetailEntity(OrderDetailDto orderDetailDto);
 } 

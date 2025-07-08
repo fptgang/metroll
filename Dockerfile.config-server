@@ -1,26 +1,7 @@
-###############################
-# Stage 1 – build the module  #
-###############################
-FROM eclipse-temurin:21-jdk-jammy AS builder
-WORKDIR /workspace
-
-# Copy Gradle wrapper and build scripts first
-COPY gradlew settings.gradle build.gradle ./
-COPY gradle gradle
-
-# Copy source
-COPY . .
-
-# Build only this module's Boot jar
-RUN ./gradlew --no-daemon :config-server:bootJar -x test
-
-###############################
-# Stage 2 – slim runtime      #
-###############################
 FROM eclipse-temurin:21-jdk-jammy
 WORKDIR /app
 
-# Copy the fat-jar from builder
-COPY --from=builder /workspace/config-server/build/libs/*SNAPSHOT.jar app.jar
+# Copy the pre-built jar from local build directory
+COPY config-server/build/libs/*SNAPSHOT.jar app.jar
 
 ENTRYPOINT ["java", "-Xmx1G", "-jar", "app.jar"]

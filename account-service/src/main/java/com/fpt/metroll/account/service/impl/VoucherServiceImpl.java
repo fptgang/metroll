@@ -37,8 +37,8 @@ public class VoucherServiceImpl implements VoucherService {
     private final VoucherRepository voucherRepository;
 
     public VoucherServiceImpl(MongoHelper mongoHelper,
-                            VoucherMapper voucherMapper,
-                            VoucherRepository voucherRepository) {
+            VoucherMapper voucherMapper,
+            VoucherRepository voucherRepository) {
         this.mongoHelper = mongoHelper;
         this.voucherMapper = voucherMapper;
         this.voucherRepository = voucherRepository;
@@ -113,7 +113,7 @@ public class VoucherServiceImpl implements VoucherService {
 
     @Override
     public List<VoucherDto> create(VoucherCreateRequest request) {
-        if (!SecurityUtil.hasRole(AccountRole.STAFF))
+        if (!SecurityUtil.hasRole(AccountRole.STAFF, AccountRole.ADMIN))
             throw new NoPermissionException();
 
         validateVoucherAmounts(request.getDiscountAmount(), request.getMinTransactionAmount());
@@ -144,7 +144,7 @@ public class VoucherServiceImpl implements VoucherService {
 
     @Override
     public VoucherDto update(String id, VoucherUpdateRequest request) {
-        if (!SecurityUtil.hasRole(AccountRole.STAFF))
+        if (!SecurityUtil.hasRole(AccountRole.STAFF, AccountRole.ADMIN))
             throw new NoPermissionException();
 
         validateVoucherAmounts(request.getDiscountAmount(), request.getMinTransactionAmount());
@@ -175,7 +175,7 @@ public class VoucherServiceImpl implements VoucherService {
 
     @Override
     public void revoke(String id) {
-        if (!SecurityUtil.hasRole(AccountRole.STAFF))
+        if (!SecurityUtil.hasRole(AccountRole.STAFF, AccountRole.ADMIN))
             throw new NoPermissionException();
 
         Voucher voucher = voucherRepository.findById(id)
@@ -187,4 +187,32 @@ public class VoucherServiceImpl implements VoucherService {
         voucher.setStatus(VoucherStatus.REVOKED);
         voucherRepository.save(voucher);
     }
-} 
+
+    @Override
+    public void use(String id) {
+        if (!SecurityUtil.hasRole(AccountRole.CUSTOMER))
+            throw new NoPermissionException();
+        Voucher voucher = voucherRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Voucher not found"));
+
+        if(!voucher.getOwnerId().equals(SecurityUtil.requireUserId()))
+            throw new NoPermissionException();
+
+        if (voucher.getStatus() != VoucherStatus.VALID)
+            throw new IllegalStateException("Can only use VALID vouchers");
+
+        voucher.setStatus(VoucherStatus.USED);
+        voucherRepository.save(voucher);
+    }
+
+    @Override
+    public List<VoucherDto> findMyVouchers() {
+        String currentUserId = SecurityUtil.requireUserId();
+
+        return voucherRepository.findByOwnerId(currentUserId)
+                .stream()
+                .filter(voucher -> voucher.getStatus() == VoucherStatus.VALID)
+                .map(voucherMapper::toDto)
+                .toList();
+    }
+}

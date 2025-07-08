@@ -11,8 +11,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class TicketValidationCreateRequest {
-    private String stationId;
     private String ticketId;
     private ValidationType validationType;
-    private String deviceId;
 }

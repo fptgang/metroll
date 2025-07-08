@@ -15,6 +15,8 @@ import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @Slf4j
 @RestController
 @RequestMapping("/account-discount-packages")
@@ -39,13 +41,20 @@ public class AccountDiscountPackageController {
 
     @Operation(summary = "Assign discount package to account")
     @PostMapping("/assign")
-    public ResponseEntity<AccountDiscountPackageDto> assignDiscountPackage(@RequestBody @Valid AccountDiscountAssignRequest request) {
+    public ResponseEntity<AccountDiscountPackageDto> assignDiscountPackage(
+            @RequestBody @Valid AccountDiscountAssignRequest request) {
         return ResponseEntity.ok(accountDiscountPackageService.assign(request));
     }
 
     @Operation(summary = "Get account discount package by ID")
     @GetMapping("/{id}")
     public ResponseEntity<AccountDiscountPackageDto> getAccountDiscountPackageById(@PathVariable("id") String id) {
+        return ResponseEntity.ok(accountDiscountPackageService.getByAccountId(id));
+    }
+
+    @Operation(summary = "Get account discount package by ID")
+    @GetMapping("/account/{id}")
+    public ResponseEntity<AccountDiscountPackageDto> getAccountDiscountPackageByAccountId(@PathVariable("id") String id) {
         return ResponseEntity.ok(accountDiscountPackageService.requireById(id));
     }
 
@@ -55,4 +64,16 @@ public class AccountDiscountPackageController {
         accountDiscountPackageService.unassign(id);
         return ResponseEntity.noContent().build();
     }
-} 
+
+    @Operation(summary = "Get my activated discount packages")
+    @GetMapping("/my-discount")
+    public ResponseEntity<AccountDiscountPackageDto> getMyActivatedDiscounts() {
+        return ResponseEntity.ok(accountDiscountPackageService.findMyActivatedDiscounts());
+    }
+
+    @Operation(summary = "Get my discount percentage")
+    @GetMapping("/my-discount-percentage")
+    public ResponseEntity<Float> getMyDiscountPercentage() {
+        return ResponseEntity.ok(accountDiscountPackageService.findMyDiscountPercentage());
+    }
+}

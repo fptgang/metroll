@@ -66,6 +66,7 @@ return PageMapper.INSTANCE.toPageDTO(res);
 - Use Instant for date-time
 - Prefer introducing Enums where appropriate instead of string
 - Leverage MongoDB Bson on embedding & nested structure, introduce them as distinct, small-sized data classes instead of document class
+- NEVER hard delete; Leverage soft-delete to decouple references between services
 
 8. Service
 - Use Guava Preconditions to quickly check simple validation such as input validation

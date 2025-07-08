@@ -15,7 +15,7 @@ public interface P2PJourneyService {
 
     P2PJourneyDto requireById(String id);
 
-    Optional<P2PJourneyDto> findByStations(String startStationId, String endStationId);
+    PageDto<P2PJourneyDto> findByStations( PageableDto pageable,String startStationId, String endStationId);
 
     P2PJourneyDto create(P2PJourneyCreateRequest request);
 

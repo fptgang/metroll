@@ -88,8 +88,6 @@ spring:
           uri: lb://ticket-service
           predicates:
             - Path=/tickets/**
-          filters:
-            - RewritePath=/tickets/(?<path>.*), /$\{path}
         - id: ticket-service-legacy
           uri: lb://ticket-service
           predicates:
@@ -106,28 +104,30 @@ spring:
           uri: lb://order-service
           predicates:
             - Path=/orders/**
-          filters:
-            - RewritePath=/orders/(?<path>.*), /$\{path}
         - id: order-service-legacy
           uri: lb://order-service
           predicates:
             - Path=/order/**
           filters:
             - RewritePath=/order/(?<path>.*), /$\{path}
+        - id: order-details-service
+          uri: lb://order-service
+          predicates:
+            - Path=/order-details/**
 
         # Subway Service Routes
         - id: subway-service-lines
           uri: lb://subway-service
           predicates:
             - Path=/lines/**
-          filters:
-            - RewritePath=/lines/(?<path>.*), /$\{path}
+#          filters:
+#            - RewritePath=/lines/(?<path>.*), /$\{path}
         - id: subway-service-stations
           uri: lb://subway-service
           predicates:
             - Path=/stations/**
-          filters:
-            - RewritePath=/stations/(?<path>.*), /$\{path}
+#          filters:
+#            - RewritePath=/stations/(?<path>.*), /$\{path}
         - id: subway-service-legacy
           uri: lb://subway-service
           predicates:
@@ -168,7 +168,7 @@ metroll:
 springdoc:
   cache:
     disabled: true
-  version: '@springdoc.version@'
+  version: "@springdoc.version@"
   swagger-ui:
     use-root-path: true
 

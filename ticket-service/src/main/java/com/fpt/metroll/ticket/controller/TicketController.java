@@ -1,6 +1,8 @@
 package com.fpt.metroll.ticket.controller;
 
 import com.fpt.metroll.shared.domain.dto.ticket.TicketUpsertRequest;
+import com.fpt.metroll.ticket.domain.dto.TicketDashboardDto;
+import com.fpt.metroll.ticket.service.TicketDashboardService;
 import com.fpt.metroll.ticket.service.TicketService;
 import com.fpt.metroll.shared.domain.dto.PageDto;
 import com.fpt.metroll.shared.domain.dto.PageableDto;
@@ -20,15 +22,23 @@ import java.util.List;
 
 @Slf4j
 @RestController
-@RequestMapping("/")
+@RequestMapping("/tickets")
 @Tag(name = "Ticket", description = "Ticket API")
 @SecurityRequirement(name = "bearerAuth")
 public class TicketController {
 
     private final TicketService ticketService;
+    private final TicketDashboardService ticketDashboardService;
 
-    public TicketController(TicketService ticketService) {
+    public TicketController(TicketService ticketService, TicketDashboardService ticketDashboardService) {
         this.ticketService = ticketService;
+        this.ticketDashboardService = ticketDashboardService;
+    }
+
+    @Operation(summary = "Get ticket service dashboard statistics")
+    @GetMapping("/dashboard")
+    public ResponseEntity<TicketDashboardDto> getDashboard() {
+        return ResponseEntity.ok(ticketDashboardService.getDashboard());
     }
 
     @Operation(summary = "List tickets by search & filter criteria")
@@ -53,7 +63,7 @@ public class TicketController {
 
     @Operation(summary = "Get tickets by order detail ID")
     @GetMapping("/order-detail/{orderDetailId}")
-    public ResponseEntity<List<TicketDto>> getTicketsByOrderDetailId(
+    public ResponseEntity<TicketDto> getTicketsByOrderDetailId(
             @PathVariable("orderDetailId") String orderDetailId) {
         return ResponseEntity.ok(ticketService.findByOrderDetailId(orderDetailId));
     }
@@ -82,5 +92,11 @@ public class TicketController {
     @PostMapping("/batch")
     public ResponseEntity<List<TicketDto>> createTickets(@RequestBody @Valid List<TicketUpsertRequest> ticketRequests) {
         return ResponseEntity.ok(ticketService.createTickets(ticketRequests));
+    }
+
+    @Operation(summary = "Generate QR code base64 ")
+    @GetMapping("/{id}/qrcode")
+    public ResponseEntity<String> generateQRCodeBase64(@PathVariable("id") String id) throws Exception {
+        return ResponseEntity.ok(ticketService.generateQRCodeBase64(id));
     }
 }

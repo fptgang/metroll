@@ -28,6 +28,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.List;
 
 @Slf4j
 @Service
@@ -40,10 +41,10 @@ public class AccountDiscountPackageServiceImpl implements AccountDiscountPackage
     private final DiscountPackageRepository discountPackageRepository;
 
     public AccountDiscountPackageServiceImpl(MongoHelper mongoHelper,
-                                           AccountDiscountPackageMapper accountDiscountPackageMapper,
-                                           AccountDiscountPackageRepository accountDiscountPackageRepository,
-                                           AccountRepository accountRepository,
-                                           DiscountPackageRepository discountPackageRepository) {
+            AccountDiscountPackageMapper accountDiscountPackageMapper,
+            AccountDiscountPackageRepository accountDiscountPackageRepository,
+            AccountRepository accountRepository,
+            DiscountPackageRepository discountPackageRepository) {
         this.mongoHelper = mongoHelper;
         this.accountDiscountPackageMapper = accountDiscountPackageMapper;
         this.accountDiscountPackageRepository = accountDiscountPackageRepository;
@@ -101,8 +102,19 @@ public class AccountDiscountPackageServiceImpl implements AccountDiscountPackage
     }
 
     @Override
+    public AccountDiscountPackageDto getByAccountId(String id) {
+        if(!SecurityUtil.hasRole(AccountRole.ADMIN)||!SecurityUtil.requireUserId().equals(id))
+            throw new NoPermissionException();
+        return accountDiscountPackageRepository.findByAccountIdAndStatusAndValidUntilAfter(
+                id, AccountDiscountStatus.ACTIVATED, Instant.now()
+        ).map(accountDiscountPackageMapper::toDto).orElse(
+                null
+        );
+    }
+
+    @Override
     public AccountDiscountPackageDto assign(AccountDiscountAssignRequest request) {
-        if (!SecurityUtil.hasRole(AccountRole.STAFF))
+        if (!SecurityUtil.hasRole(AccountRole.STAFF, AccountRole.ADMIN))
             throw new NoPermissionException();
 
         Preconditions.checkNotNull(request, "Request cannot be null");
@@ -155,7 +167,7 @@ public class AccountDiscountPackageServiceImpl implements AccountDiscountPackage
 
     @Override
     public void unassign(String id) {
-        if (!SecurityUtil.hasRole(AccountRole.STAFF))
+        if (!SecurityUtil.hasRole(AccountRole.STAFF, AccountRole.ADMIN))
             throw new NoPermissionException();
 
         Preconditions.checkNotNull(id, "ID cannot be null");
@@ -173,11 +185,32 @@ public class AccountDiscountPackageServiceImpl implements AccountDiscountPackage
 
         // Check if the discount package is ongoing
         if (accountDiscountPackage.getStatus() != AccountDiscountStatus.ACTIVATED ||
-            accountDiscountPackage.getValidUntil().isBefore(Instant.now())) {
+                accountDiscountPackage.getValidUntil().isBefore(Instant.now())) {
             throw new IllegalStateException("Can only unassign ongoing discount packages");
         }
 
         accountDiscountPackage.setStatus(AccountDiscountStatus.CANCELLED);
         accountDiscountPackageRepository.save(accountDiscountPackage);
     }
-} 
+
+    @Override
+    public AccountDiscountPackageDto findMyActivatedDiscounts() {
+        String currentUserId = SecurityUtil.requireUserId();
+        Instant now = Instant.now();
+
+        Optional<AccountDiscountPackage> activatedDiscount = accountDiscountPackageRepository
+                .findByAccountIdAndStatusAndValidUntilAfter(currentUserId, AccountDiscountStatus.ACTIVATED, now);
+
+        return accountDiscountPackageMapper.toDto(activatedDiscount.orElse(null));
+    }
+
+    @Override
+    public Float findMyDiscountPercentage() {
+        AccountDiscountPackageDto accountDiscountPackageDto = findMyActivatedDiscounts();
+        if (accountDiscountPackageDto != null) {
+            DiscountPackage discountPackage = discountPackageRepository.findById(accountDiscountPackageDto.getDiscountPackageId()).orElse(null);
+            return discountPackage != null ? discountPackage.getDiscountPercentage() : null;
+        }
+        return null;
+    }
+}
