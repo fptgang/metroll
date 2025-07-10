@@ -154,11 +154,13 @@ public class OrderServiceImpl implements OrderService {
 
         BigDecimal finalTotal = baseTotal.subtract(totalDiscountAmount);
 
+        var packageId = accountDiscountPackageDto != null ? accountDiscountPackageDto.getDiscountPackageId() : null;
+
         // Create order
         Order order = Order.builder()
                 .staffId(staffId)
                 .customerId(customerId)
-                .discountPackage(accountDiscountPackageDto.getDiscountPackageId())
+                .discountPackage(packageId)
                 .voucher(checkoutRequest.getVoucherId())
                 .baseTotal(baseTotal)
                 .discountTotal(totalDiscountAmount)
@@ -181,9 +183,11 @@ public class OrderServiceImpl implements OrderService {
             createPayOSPaymentLink(order);
         } else {
             // For CASH and VNPAY payments, complete the order immediately
-            order.setStatus(OrderStatus.COMPLETED);
-            orderRepository.save(order);
-            createTicketsForOrder(order);
+            if (SecurityUtil.hasRole(AccountRole.STAFF, AccountRole.ADMIN)) {
+                order.setStatus(OrderStatus.COMPLETED);
+                orderRepository.save(order);
+                createTicketsForOrder(order);
+            }
         }
 
         log.info("Created order {} for customer {} with staff {} and final total {}",
@@ -418,7 +422,7 @@ public class OrderServiceImpl implements OrderService {
         BigDecimal totalDiscountAmount = BigDecimal.ZERO;
 
         // Apply discount package if provided
-        if ( accountDiscountPackageDto != null && accountDiscountPackageDto.getDiscountPackageId() != null) {
+        if (accountDiscountPackageDto != null && accountDiscountPackageDto.getDiscountPackageId() != null) {
             try {
                 BigDecimal packageDiscount = calculateDiscountPackageDiscount(accountDiscountPackageDto, baseTotal);
                 totalDiscountAmount = totalDiscountAmount.add(packageDiscount);
@@ -443,7 +447,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     private BigDecimal calculateDiscountPackageDiscount(AccountDiscountPackageDto accountDiscountPackageDto,
-            BigDecimal baseTotal) {
+                                                        BigDecimal baseTotal) {
         DiscountPackageDto discountPackageDto = discountPackageClient.getDiscountPackage(accountDiscountPackageDto.getDiscountPackageId());
         return baseTotal.multiply(BigDecimal.valueOf(discountPackageDto.getDiscountPercentage()));
     }
