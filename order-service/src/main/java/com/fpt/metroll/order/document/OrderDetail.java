@@ -1,16 +1,19 @@
 package com.fpt.metroll.order.document;
 
 import com.fpt.metroll.shared.domain.enums.TicketType;
+import io.hypersistence.utils.hibernate.type.array.StringArrayType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.Type;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 
 @Entity
 @Table(name = "order_details")
@@ -28,8 +31,9 @@ public class OrderDetail {
     @JoinColumn(name = "order_id")
     private Order order;
 
-    @Column(name = "ticket_id")
-    private String ticketId;
+    @Column(name = "ticket_ids", columnDefinition = "text[]")
+    @Type(StringArrayType.class)
+    private List<String> ticketIds;
     
     @Enumerated(EnumType.STRING)
     @Column(name = "ticket_type")

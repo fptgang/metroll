@@ -32,6 +32,9 @@ import com.fpt.metroll.shared.domain.mapper.PageMapper;
 import com.fpt.metroll.shared.exception.NoPermissionException;
 import com.fpt.metroll.shared.util.SecurityUtil;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Multimap;
+import com.google.common.collect.Multiset;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -382,14 +385,13 @@ public class OrderServiceImpl implements OrderService {
         if (!ticketRequests.isEmpty()) {
             try {
                 List<TicketDto> createdTickets = ticketClient.createTickets(ticketRequests);
-                Map<String, String> ticketIdMap = createdTickets.stream()
-                        .collect(Collectors.toMap(TicketDto::getTicketOrderDetailId, TicketDto::getId));
+                Multimap<String, String> ticketIdMap = ArrayListMultimap.create();
+                for (TicketDto ticket : createdTickets) {
+                    ticketIdMap.put(ticket.getTicketOrderDetailId(), ticket.getId());
+                }
 
                 order.getOrderDetails().forEach(orderDetail -> {
-                    String ticketId = ticketIdMap.get(orderDetail.getId());
-                    if (ticketId != null) {
-                        orderDetail.setTicketId(ticketId);
-                    }
+                    orderDetail.setTicketIds(new ArrayList<>(ticketIdMap.get(orderDetail.getId())));
                 });
                 orderRepository.save(order);
                 log.info("Created {} tickets for order {}", createdTickets.size(), order.getId());

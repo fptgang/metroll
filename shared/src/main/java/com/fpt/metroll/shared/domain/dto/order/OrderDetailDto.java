@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 
 @Builder
 @Data
@@ -17,7 +18,7 @@ public class OrderDetailDto {
     private String id;
     private String orderId;
 
-    private String ticketId;
+    private List<String> ticketIds;
     
     private TicketType ticketType; // P2P|TIMED
     private String p2pJourney; // Reference to P2PJourney._id
