@@ -55,7 +55,7 @@ public class PayOSServiceImpl implements PayOSService {
                     .collect(Collectors.toList());
             
             // Ensure amount is in cents/smallest currency unit and at least 1 cent
-            int amount = Math.max(1, order.getFinalTotal().multiply(java.math.BigDecimal.valueOf(100)).intValue());
+            int amount = Math.max(1, order.getFinalTotal().intValue());
             
             // Ensure description is within 25 character limit
             String description = "Metro #" + order.getId().substring(0, Math.min(8, order.getId().length()));
