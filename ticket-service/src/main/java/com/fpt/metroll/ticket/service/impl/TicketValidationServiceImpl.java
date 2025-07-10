@@ -127,6 +127,47 @@ public class TicketValidationServiceImpl implements TicketValidationService {
     }
 
     @Override
+    public PageDto<TicketValidationDto> findByStationId(String stationId, String search, ValidationType
+            validationType  , Instant startDate,
+            Instant endDate, PageableDto pageable) {
+        if (!SecurityUtil.hasRole(AccountRole.ADMIN, AccountRole.STAFF))
+            throw new NoPermissionException();
+
+        Preconditions.checkNotNull(stationId, "Station ID cannot be null");
+
+        var res = mongoHelper.find(query -> {
+            // Filter by station ID
+            query.addCriteria(Criteria.where("stationId").is(stationId));
+
+            // Add search criteria for validatorId and ticketId
+            if (search != null && !search.isBlank()) {
+                Criteria criteria = new Criteria().orOperator(
+                        Criteria.where("validatorId").regex(search, "i"),
+                        Criteria.where("ticketId").regex(search, "i"));
+                query.addCriteria(criteria);
+            }
+
+
+            // Add validation type filtering
+            if (validationType != null) {
+                query.addCriteria(Criteria.where("validationType").is(validationType));
+            }
+
+            // Add time range filtering
+            if (startDate != null && endDate != null) {
+                query.addCriteria(Criteria.where("validationTime").gte(startDate).lte(endDate));
+            } else if (startDate != null) {
+                query.addCriteria(Criteria.where("validationTime").gte(startDate));
+            } else if (endDate != null) {
+                query.addCriteria(Criteria.where("validationTime").lte(endDate));
+            }
+
+            return query;
+        }, pageable, TicketValidation.class).map(mapper::toDto);
+        return PageMapper.INSTANCE.toPageDTO(res);
+    }
+
+    @Override
     @Transactional
     public TicketValidationDto validateTicket(TicketValidationCreateRequest request) {
         // Only STAFF can validate tickets

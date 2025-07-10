@@ -1,5 +1,6 @@
 package com.fpt.metroll.ticket.controller;
 
+import com.fpt.metroll.shared.domain.enums.ValidationType;
 import com.fpt.metroll.ticket.domain.dto.TicketValidationCreateRequest;
 import com.fpt.metroll.ticket.service.TicketValidationService;
 import com.fpt.metroll.shared.domain.dto.PageDto;
@@ -58,10 +59,16 @@ public class TicketValidationController {
         return ResponseEntity.ok(ticketValidationService.findByTicketId(ticketId));
     }
 
-    @Operation(summary = "Get ticket validations by station ID")
-    @GetMapping("/station/{stationId}")
-    public ResponseEntity<List<TicketValidationDto>> getTicketValidationsByStationId(
-            @PathVariable("stationId") String stationId) {
-        return ResponseEntity.ok(ticketValidationService.findByStationId(stationId));
+    @Operation(summary = "Get ticket validations by station Code")
+    @GetMapping("/station/{stationCode}")
+    public ResponseEntity<PageDto<TicketValidationDto>> getTicketValidationsByStationId(
+            @PathVariable("stationCode") String stationCode,
+            @ParameterObject @Valid PageableDto pageableDto,
+            @Parameter @RequestParam(name = "search", required = false) String search,
+            @Parameter @RequestParam(name = "validationType", required = false) ValidationType validationType,
+            @Parameter @RequestParam(name = "startDate", required = false) java.time.Instant startDate,
+            @Parameter @RequestParam(name = "endDate", required = false) java.time.Instant endDate) {
+        return ResponseEntity
+                .ok(ticketValidationService.findByStationId(stationCode, search, validationType, startDate, endDate, pageableDto));
     }
 }
