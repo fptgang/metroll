@@ -49,13 +49,13 @@ public class AccountDiscountPackageController {
     @Operation(summary = "Get account discount package by ID")
     @GetMapping("/{id}")
     public ResponseEntity<AccountDiscountPackageDto> getAccountDiscountPackageById(@PathVariable("id") String id) {
-        return ResponseEntity.ok(accountDiscountPackageService.getByAccountId(id));
+        return ResponseEntity.ok(accountDiscountPackageService.requireById(id));
     }
 
     @Operation(summary = "Get account discount package by ID")
     @GetMapping("/account/{id}")
     public ResponseEntity<AccountDiscountPackageDto> getAccountDiscountPackageByAccountId(@PathVariable("id") String id) {
-        return ResponseEntity.ok(accountDiscountPackageService.requireById(id));
+        return ResponseEntity.ok(accountDiscountPackageService.getByAccountId(id));
     }
 
     @Operation(summary = "Unassign discount package from account")
