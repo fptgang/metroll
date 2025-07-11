@@ -188,8 +188,7 @@ public class AccountServiceImpl implements AccountService {
 
     @Override
     public void deactivate(String id) {
-        if (!SecurityUtil.hasRole(AccountRole.ADMIN) ||
-                Objects.equals(SecurityUtil.requireUserId(), id))
+        if (!SecurityUtil.hasRole(AccountRole.ADMIN))
             throw new NoPermissionException();
 
         Account account = accountRepository.findById(id)
@@ -200,6 +199,23 @@ public class AccountServiceImpl implements AccountService {
             throw new NoPermissionException();
 
         account.setActive(false);
+        accountRepository.save(account);
+
+    }
+
+    @Override
+    public void activate(String id) {
+        if (!SecurityUtil.hasRole(AccountRole.ADMIN))
+            throw new NoPermissionException();
+
+        Account account = accountRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Account not found"));
+
+        // Cannot deactivate account with higher-or-same role
+        if (account.getRole().hasHigherOrEqualRank(SecurityUtil.requireUserRole()))
+            throw new NoPermissionException();
+
+        account.setActive(true);
         accountRepository.save(account);
 
     }

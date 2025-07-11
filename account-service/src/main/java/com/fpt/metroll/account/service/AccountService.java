@@ -27,6 +27,8 @@ public interface AccountService {
 
     void deactivate(String id);
 
+    void activate(String id);
+
     AccountDto assignStation(String accountId, StationAssignRequest request);
 
     AccountDashboardDto getDashboard();

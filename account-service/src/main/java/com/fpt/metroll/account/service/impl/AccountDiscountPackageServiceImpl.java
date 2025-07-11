@@ -91,19 +91,12 @@ public class AccountDiscountPackageServiceImpl implements AccountDiscountPackage
     @Override
     public AccountDiscountPackageDto requireById(String id) {
         return findById(id)
-                .map(e -> {
-                    if (SecurityUtil.hasRole(AccountRole.CUSTOMER) &&
-                            !Objects.equals(e.getAccountId(), SecurityUtil.requireUserId())) {
-                        throw new NoPermissionException();
-                    }
-                    return e;
-                })
                 .orElseThrow(() -> new IllegalArgumentException("Account discount package not found"));
     }
 
     @Override
     public AccountDiscountPackageDto getByAccountId(String id) {
-        if(!SecurityUtil.hasRole(AccountRole.ADMIN)||!SecurityUtil.requireUserId().equals(id))
+        if(!SecurityUtil.hasRole(AccountRole.ADMIN)&&!SecurityUtil.requireUserId().equals(id))
             throw new NoPermissionException();
         return accountDiscountPackageRepository.findByAccountIdAndStatusAndValidUntilAfter(
                 id, AccountDiscountStatus.ACTIVATED, Instant.now()

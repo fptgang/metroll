@@ -101,4 +101,11 @@ public class AccountController {
         accountService.deactivate(id);
         return ResponseEntity.noContent().build();
     }
+
+    @Operation(summary = "Activate account")
+    @PutMapping("/{id}/activate")
+    public ResponseEntity<Void> activateAccount(@PathVariable("id") String id) {
+        accountService.activate(id);
+        return ResponseEntity.noContent().build();
+    }
 }
