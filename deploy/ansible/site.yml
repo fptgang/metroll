@@ -79,7 +79,7 @@
       git:
         repo: "{{ repo_url }}"
         dest: "{{ app_root }}"
-        version: "feature/vi_order-api"
+        version: "develop"
         update: yes
         force: yes
 
