@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 
-@FeignClient(name = "ticket-service", configuration = com.fpt.metroll.shared.config.FeignClientConfiguration.class, fallbackFactory = TicketClient.TicketClientFallbackFactory.class)
+@FeignClient(name = "ticket-service", contextId = "ticketClient", configuration = com.fpt.metroll.shared.config.FeignClientConfiguration.class, fallbackFactory = TicketClient.TicketClientFallbackFactory.class)
 public interface TicketClient {
 
     @PostMapping("/tickets")

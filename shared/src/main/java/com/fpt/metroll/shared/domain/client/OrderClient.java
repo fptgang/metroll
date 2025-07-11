@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 
 import java.util.Map;
 
-@FeignClient(name = "order-service", configuration = com.fpt.metroll.shared.config.FeignClientConfiguration.class)
+@FeignClient(name = "order-service", contextId = "orderClient", configuration = com.fpt.metroll.shared.config.FeignClientConfiguration.class)
 public interface OrderClient {
 
     @GetMapping("/orders/{orderId}")
