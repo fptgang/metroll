@@ -156,6 +156,9 @@ public class PayOSServiceImpl implements PayOSService {
             if ("00".equals(webhookData.getCode())) {
                 // Payment successful
                 order.setStatus(OrderStatus.COMPLETED);
+                // Create tickets for the order
+                orderRepository.save(order);
+                createTicketsForOrder(order);
                 log.info("Payment completed for order {} with amount {}", 
                         order.getId(), webhookData.getAmount());
             } else {
@@ -172,7 +175,43 @@ public class PayOSServiceImpl implements PayOSService {
             throw new PaymentProcessingException("Failed to process payment completion: " + e.getMessage(), e);
         }
     }
-    
+    private void createTicketsForOrder(Order order) {
+        List<TicketUpsertRequest> ticketRequests = new ArrayList<>();
+
+        for (OrderDetail detail : order.getOrderDetails()) {
+            for (int i = 0; i < detail.getQuantity(); i++) {
+                Instant validUntil = calculateValidUntil(detail);
+
+                TicketUpsertRequest ticketRequest = TicketUpsertRequest.builder()
+                                                                       .ticketType(detail.getTicketType())
+                                                                       .ticketOrderDetailId(detail.getId())
+                                                                       .validUntil(validUntil)
+                                                                       .status(TicketStatus.VALID)
+                                                                       .build();
+
+                ticketRequests.add(ticketRequest);
+            }
+        }
+
+        if (!ticketRequests.isEmpty()) {
+            try {
+                List<TicketDto> createdTickets = ticketClient.createTickets(ticketRequests);
+                Multimap<String, String> ticketIdMap = ArrayListMultimap.create();
+                for (TicketDto ticket : createdTickets) {
+                    ticketIdMap.put(ticket.getTicketOrderDetailId(), ticket.getId());
+                }
+
+                order.getOrderDetails().forEach(orderDetail -> {
+                    orderDetail.setTicketIds(new ArrayList<>(ticketIdMap.get(orderDetail.getId())));
+                });
+                orderRepository.save(order);
+                log.info("Created {} tickets for order {}", createdTickets.size(), order.getId());
+            } catch (Exception e) {
+                log.error("Failed to create tickets for order {}", order.getId(), e);
+                // In a real system, this might trigger a compensation flow
+            }
+        }
+    }
     private Long generateOrderCode(String orderId) {
         try {
             // Convert UUID to numeric order code by taking the first 12 digits
