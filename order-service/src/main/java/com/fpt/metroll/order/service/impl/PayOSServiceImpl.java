@@ -196,7 +196,7 @@ public class PayOSServiceImpl implements PayOSService {
         
         return ItemData.builder()
                 .name(itemName)
-                .quantity(detail.getQuantity())
+                .quantity(1)
                 .price(priceInCents)
                 .build();
     }
