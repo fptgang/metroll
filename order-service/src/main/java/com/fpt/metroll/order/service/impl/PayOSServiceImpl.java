@@ -6,16 +6,27 @@ import com.fpt.metroll.order.document.Order;
 import com.fpt.metroll.order.document.OrderDetail;
 import com.fpt.metroll.order.repository.OrderRepository;
 import com.fpt.metroll.order.service.PayOSService;
+import com.fpt.metroll.shared.domain.client.TicketClient;
+import com.fpt.metroll.shared.domain.dto.ticket.TicketDto;
+import com.fpt.metroll.shared.domain.dto.ticket.TicketUpsertRequest;
+import com.fpt.metroll.shared.domain.dto.ticket.TimedTicketPlanDto;
 import com.fpt.metroll.shared.domain.enums.OrderStatus;
+import com.fpt.metroll.shared.domain.enums.TicketStatus;
 import com.fpt.metroll.shared.domain.enums.TicketType;
 import com.fpt.metroll.shared.exception.PaymentProcessingException;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Multimap;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import vn.payos.PayOS;
 import vn.payos.type.*;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -26,15 +37,19 @@ public class PayOSServiceImpl implements PayOSService {
     private final PayOSConfig payOSConfig;
     private final OrderRepository orderRepository;
     private final ObjectMapper objectMapper;
-    
+    private final TicketClient ticketClient;
+
     public PayOSServiceImpl(PayOSConfig payOSConfig,
                            OrderRepository orderRepository,
                            ObjectMapper objectMapper,
-                           @Autowired(required = false) PayOS payOS) {
+                           @Autowired(required = false) PayOS payOS,
+                            TicketClient ticketClient
+                            ) {
         this.payOS = payOS;
         this.payOSConfig = payOSConfig;
         this.orderRepository = orderRepository;
         this.objectMapper = objectMapper;
+        this.ticketClient = ticketClient;
     }
     
     @Override
@@ -179,30 +194,31 @@ public class PayOSServiceImpl implements PayOSService {
         List<TicketUpsertRequest> ticketRequests = new ArrayList<>();
 
         for (OrderDetail detail : order.getOrderDetails()) {
-            for (int i = 0; i < detail.getQuantity(); i++) {
-                Instant validUntil = calculateValidUntil(detail);
+//            for (int i = 0; i < detail.getQuantity(); i++) {
+            Instant validUntil = calculateValidUntil(detail);
 
-                TicketUpsertRequest ticketRequest = TicketUpsertRequest.builder()
-                                                                       .ticketType(detail.getTicketType())
-                                                                       .ticketOrderDetailId(detail.getId())
-                                                                       .validUntil(validUntil)
-                                                                       .status(TicketStatus.VALID)
-                                                                       .build();
+            TicketUpsertRequest ticketRequest = TicketUpsertRequest.builder()
+                                                                   .ticketType(detail.getTicketType())
+                                                                   .ticketOrderDetailId(detail.getId())
+                                                                   .validUntil(validUntil)
+                                                                   .status(TicketStatus.VALID)
+                                                                   .build();
 
-                ticketRequests.add(ticketRequest);
-            }
+            ticketRequests.add(ticketRequest);
+//            }
         }
 
         if (!ticketRequests.isEmpty()) {
             try {
                 List<TicketDto> createdTickets = ticketClient.createTickets(ticketRequests);
-                Multimap<String, String> ticketIdMap = ArrayListMultimap.create();
-                for (TicketDto ticket : createdTickets) {
-                    ticketIdMap.put(ticket.getTicketOrderDetailId(), ticket.getId());
-                }
+                Map<String, String> ticketIdMap = createdTickets.stream()
+                                                                .collect(Collectors.toMap(TicketDto::getTicketOrderDetailId, TicketDto::getId));
 
                 order.getOrderDetails().forEach(orderDetail -> {
-                    orderDetail.setTicketIds(new ArrayList<>(ticketIdMap.get(orderDetail.getId())));
+                    String ticketId = ticketIdMap.get(orderDetail.getId());
+                    if (ticketId != null) {
+                        orderDetail.setTicketId(ticketId);
+                    }
                 });
                 orderRepository.save(order);
                 log.info("Created {} tickets for order {}", createdTickets.size(), order.getId());
@@ -212,6 +228,25 @@ public class PayOSServiceImpl implements PayOSService {
             }
         }
     }
+    private Instant calculateValidUntil(OrderDetail detail) {
+        if (detail.getTicketType() == TicketType.P2P) {
+            // P2P tickets are valid for 1 day
+            return Instant.now().plus(1, ChronoUnit.DAYS);
+        } else if (detail.getTicketType() == TicketType.TIMED && detail.getTimedTicketPlan() != null) {
+            // Get the plan duration from the ticket service
+            try {
+                TimedTicketPlanDto plan = ticketClient.getTimedTicketPlanById(detail.getTimedTicketPlan());
+                return Instant.now().plus(plan.getValidDuration(), ChronoUnit.DAYS);
+            } catch (Exception e) {
+                log.warn("Failed to get timed ticket plan duration for {}, defaulting to 30 days",
+                        detail.getTimedTicketPlan());
+                return Instant.now().plus(30, ChronoUnit.DAYS);
+            }
+        }
+        return Instant.now().plus(1, ChronoUnit.DAYS);
+    }
+
+
     private Long generateOrderCode(String orderId) {
         try {
             // Convert UUID to numeric order code by taking the first 12 digits
