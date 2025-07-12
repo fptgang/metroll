@@ -32,9 +32,6 @@ import com.fpt.metroll.shared.domain.mapper.PageMapper;
 import com.fpt.metroll.shared.exception.NoPermissionException;
 import com.fpt.metroll.shared.util.SecurityUtil;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.Multimap;
-import com.google.common.collect.Multiset;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -139,7 +136,7 @@ public class OrderServiceImpl implements OrderService {
                     .ticketType(item.getTicketType())
                     .p2pJourney(p2pJourneyId)
                     .timedTicketPlan(timedTicketPlanId)
-                    .quantity(item.getQuantity())
+//                    .quantity(item.getQuantity())
                     .unitPrice(unitPrice)
                     .baseTotal(itemBaseTotal)
                     .discountTotal(BigDecimal.ZERO) // Will be calculated later
@@ -368,7 +365,7 @@ public class OrderServiceImpl implements OrderService {
         List<TicketUpsertRequest> ticketRequests = new ArrayList<>();
 
         for (OrderDetail detail : order.getOrderDetails()) {
-            for (int i = 0; i < detail.getQuantity(); i++) {
+//            for (int i = 0; i < detail.getQuantity(); i++) {
                 Instant validUntil = calculateValidUntil(detail);
 
                 TicketUpsertRequest ticketRequest = TicketUpsertRequest.builder()
@@ -379,19 +376,20 @@ public class OrderServiceImpl implements OrderService {
                         .build();
 
                 ticketRequests.add(ticketRequest);
-            }
+//            }
         }
 
         if (!ticketRequests.isEmpty()) {
             try {
                 List<TicketDto> createdTickets = ticketClient.createTickets(ticketRequests);
-                Multimap<String, String> ticketIdMap = ArrayListMultimap.create();
-                for (TicketDto ticket : createdTickets) {
-                    ticketIdMap.put(ticket.getTicketOrderDetailId(), ticket.getId());
-                }
+                Map<String, String> ticketIdMap = createdTickets.stream()
+                        .collect(Collectors.toMap(TicketDto::getTicketOrderDetailId, TicketDto::getId));
 
                 order.getOrderDetails().forEach(orderDetail -> {
-                    orderDetail.setTicketIds(new ArrayList<>(ticketIdMap.get(orderDetail.getId())));
+                    String ticketId = ticketIdMap.get(orderDetail.getId());
+                    if (ticketId != null) {
+                        orderDetail.setTicketId(ticketId);
+                    }
                 });
                 orderRepository.save(order);
                 log.info("Created {} tickets for order {}", createdTickets.size(), order.getId());

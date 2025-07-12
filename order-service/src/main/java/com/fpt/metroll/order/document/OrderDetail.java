@@ -31,9 +31,8 @@ public class OrderDetail {
     @JoinColumn(name = "order_id")
     private Order order;
 
-    @Column(name = "ticket_ids", columnDefinition = "text[]")
-    @Type(StringArrayType.class)
-    private List<String> ticketIds;
+    @Column(name = "ticket_id")
+    private String ticketId;
     
     @Enumerated(EnumType.STRING)
     @Column(name = "ticket_type")
@@ -45,8 +44,8 @@ public class OrderDetail {
     @Column(name = "timed_ticket_plan")
     private String timedTicketPlan; // Reference to TimedTicketPlan._id
     
-    @Column(name = "quantity")
-    private Integer quantity;
+//    @Column(name = "quantity")
+//    private Integer quantity;
     
     @Column(name = "unit_price", precision = 19, scale = 2)
     private BigDecimal unitPrice; // giá đơn vị

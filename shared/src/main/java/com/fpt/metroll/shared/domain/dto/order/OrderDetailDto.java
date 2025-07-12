@@ -18,13 +18,13 @@ public class OrderDetailDto {
     private String id;
     private String orderId;
 
-    private List<String> ticketIds;
+    private String ticketId;
     
     private TicketType ticketType; // P2P|TIMED
     private String p2pJourney; // Reference to P2PJourney._id
     private String timedTicketPlan; // Reference to TimedTicketPlan._id
     
-    private Integer quantity;
+//    private Integer quantity;
     private BigDecimal unitPrice; // giá đơn vị
     private BigDecimal baseTotal; // tổng giá
     private BigDecimal discountTotal; // tổng discount
