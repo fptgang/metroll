@@ -128,6 +128,10 @@ spring:
             - Path=/stations/**
 #          filters:
 #            - RewritePath=/stations/(?<path>.*), /$\{path}
+        - id: subway-service-stations
+          uri: lb://subway-service
+          predicates:
+            - Path=/trains/**
         - id: subway-service-legacy
           uri: lb://subway-service
           predicates:
