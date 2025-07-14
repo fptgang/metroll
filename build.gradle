@@ -107,5 +107,9 @@ project(':shared') {
 
         implementation 'org.mongodb:mongodb-driver-sync:4.11.1'
         implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
+        
+        // Email dependencies
+        implementation 'org.springframework.boot:spring-boot-starter-mail'
+        implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
     }
 }

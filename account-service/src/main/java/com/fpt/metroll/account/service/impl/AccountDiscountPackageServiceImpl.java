@@ -12,11 +12,14 @@ import com.fpt.metroll.account.service.AccountDiscountPackageService;
 import com.fpt.metroll.shared.domain.dto.PageDto;
 import com.fpt.metroll.shared.domain.dto.PageableDto;
 import com.fpt.metroll.shared.domain.dto.discount.AccountDiscountPackageDto;
+import com.fpt.metroll.shared.domain.dto.email.DiscountPackageEmailContext;
 import com.fpt.metroll.shared.domain.enums.AccountDiscountStatus;
 import com.fpt.metroll.shared.domain.enums.AccountRole;
 import com.fpt.metroll.shared.domain.enums.DiscountPackageStatus;
+import com.fpt.metroll.shared.domain.enums.EmailType;
 import com.fpt.metroll.shared.domain.mapper.PageMapper;
 import com.fpt.metroll.shared.exception.NoPermissionException;
+import com.fpt.metroll.shared.service.EmailService;
 import com.fpt.metroll.shared.util.MongoHelper;
 import com.fpt.metroll.shared.util.SecurityUtil;
 import com.google.common.base.Preconditions;
@@ -39,17 +42,19 @@ public class AccountDiscountPackageServiceImpl implements AccountDiscountPackage
     private final AccountDiscountPackageRepository accountDiscountPackageRepository;
     private final AccountRepository accountRepository;
     private final DiscountPackageRepository discountPackageRepository;
+    private final EmailService emailService;
 
     public AccountDiscountPackageServiceImpl(MongoHelper mongoHelper,
-            AccountDiscountPackageMapper accountDiscountPackageMapper,
-            AccountDiscountPackageRepository accountDiscountPackageRepository,
-            AccountRepository accountRepository,
-            DiscountPackageRepository discountPackageRepository) {
+                                             AccountDiscountPackageMapper accountDiscountPackageMapper,
+                                             AccountDiscountPackageRepository accountDiscountPackageRepository,
+                                             AccountRepository accountRepository,
+                                             DiscountPackageRepository discountPackageRepository, EmailService emailService) {
         this.mongoHelper = mongoHelper;
         this.accountDiscountPackageMapper = accountDiscountPackageMapper;
         this.accountDiscountPackageRepository = accountDiscountPackageRepository;
         this.accountRepository = accountRepository;
         this.discountPackageRepository = discountPackageRepository;
+        this.emailService = emailService;
     }
 
     @Override
@@ -155,6 +160,23 @@ public class AccountDiscountPackageServiceImpl implements AccountDiscountPackage
                 .build();
 
         accountDiscountPackage = accountDiscountPackageRepository.save(accountDiscountPackage);
+        emailService.sendDiscountPackageEmail(
+                account.getEmail(),
+                discountPackage.getName(),
+                EmailType.DISCOUNT_PACKAGE_ASSIGNED,
+                DiscountPackageEmailContext.builder()
+                        .discountPackageName(discountPackage.getName())
+                        .discountPackageId(discountPackage.getId())
+                        .discountPackageDescription(discountPackage.getDescription())
+                        .discountPercentage(discountPackage.getDiscountPercentage().doubleValue())
+                        .validFrom(activateDate)
+                        .validUntil(validUntil)
+                        .status("ACTIVATED")
+                        .actionPerformedBy(SecurityUtil.requireUserRole().name()) // Staff/Admin who performed the action
+                        .actionDate(now)
+                        .actionReason(null) // Optional reason for assignment/unassignment
+                        .build()
+        );
         return accountDiscountPackageMapper.toDto(accountDiscountPackage);
     }
 
@@ -183,6 +205,29 @@ public class AccountDiscountPackageServiceImpl implements AccountDiscountPackage
         }
 
         accountDiscountPackage.setStatus(AccountDiscountStatus.CANCELLED);
+
+        Instant now = Instant.now();
+        Instant activateDate = accountDiscountPackage.getActivateDate();
+        Instant validUntil = accountDiscountPackage.getValidUntil();
+        DiscountPackage discountPackage = discountPackageRepository.findById(accountDiscountPackage.getDiscountPackageId())
+                .orElseThrow(() -> new IllegalArgumentException("Discount package not found"));
+        emailService.sendDiscountPackageEmail(
+                account.getEmail(),
+                discountPackage.getName(),
+                EmailType.DISCOUNT_PACKAGE_ASSIGNED,
+                DiscountPackageEmailContext.builder()
+                        .discountPackageName(discountPackage.getName())
+                        .discountPackageId(discountPackage.getId())
+                        .discountPackageDescription(discountPackage.getDescription())
+                        .discountPercentage(discountPackage.getDiscountPercentage().doubleValue())
+                        .validFrom(activateDate)
+                        .validUntil(validUntil)
+                        .status("ACTIVATED")
+                        .actionPerformedBy(SecurityUtil.requireUserRole().name()) // Staff/Admin who performed the action
+                        .actionDate(now)
+                        .actionReason(null) // Optional reason for assignment/unassignment
+                        .build()
+        );
         accountDiscountPackageRepository.save(accountDiscountPackage);
     }
 

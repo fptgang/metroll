@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Metroll - Voucher Revoked</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .email-container {
+            background-color: #ffffff;
+            margin: 20px;
+            padding: 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 8px 8px 0 0;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        .content {
+            padding: 30px;
+        }
+        .content h2 {
+            color: #e74c3c;
+            margin-top: 0;
+        }
+        .info-box {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .info-box h3 {
+            color: #2c3e50;
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        .info-label {
+            font-weight: bold;
+            color: #555;
+        }
+        .info-value {
+            color: #333;
+        }
+        .footer {
+            background-color: #f8f9fa;
+            color: #666;
+            text-align: center;
+            padding: 20px;
+            font-size: 12px;
+            border-radius: 0 0 8px 8px;
+            border-top: 1px solid #e9ecef;
+        }
+        .amount {
+            font-weight: bold;
+            font-size: 18px;
+            color: #27ae60;
+        }
+        .voucher-code {
+            background-color: #fdf2f2;
+            border: 2px dashed #e74c3c;
+            border-radius: 4px;
+            padding: 15px;
+            text-align: center;
+            margin: 20px 0;
+            font-size: 20px;
+            font-weight: bold;
+            color: #e74c3c;
+            letter-spacing: 2px;
+            text-decoration: line-through;
+        }
+        .warning-icon {
+            color: #e74c3c;
+            font-size: 48px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .reason-box {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .reason-box h4 {
+            color: #856404;
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+        
+        @media only screen and (max-width: 600px) {
+            .email-container {
+                margin: 10px;
+            }
+            .content {
+                padding: 20px;
+            }
+            .info-row {
+                flex-direction: column;
+            }
+            .info-label {
+                margin-bottom: 2px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="header">
+            <h1>Metroll</h1>
+            <p>Metro Ticketing System</p>
+        </div>
+        
+        <div class="content">
+            <div class="warning-icon">⚠</div>
+            
+            <h2>Voucher Revoked</h2>
+            
+            <p>Dear <span th:text="${recipientName}">Customer</span>,</p>
+            
+            <p>We are writing to inform you that your voucher has been revoked and is no longer valid for use. This action was taken by our staff team.</p>
+            
+            <div class="voucher-code">
+                <span th:text="${voucherCode}">VOUCHER123</span>
+            </div>
+            
+            <div class="info-box">
+                <h3>Voucher Details</h3>
+                <div class="info-row">
+                    <span class="info-label">Voucher Code:</span>
+                    <span class="info-value" th:text="${voucherCode}">VOUCHER123</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Discount Amount:</span>
+                    <span class="info-value amount" th:text="${#numbers.formatCurrency(discountAmount)}">$10.00</span>
+                </div>
+                <div class="info-row" th:if="${minTransactionAmount != null}">
+                    <span class="info-label">Minimum Purchase:</span>
+                    <span class="info-value" th:text="${#numbers.formatCurrency(minTransactionAmount)}">$20.00</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Revoked On:</span>
+                    <span class="info-value" th:text="${actionDate}">January 1, 2024</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Revoked By:</span>
+                    <span class="info-value" th:text="${actionPerformedBy}">Staff Member</span>
+                </div>
+            </div>
+            
+            <div class="reason-box" th:if="${actionReason != null and actionReason != ''}">
+                <h4>Reason for Revocation:</h4>
+                <p th:text="${actionReason}">Policy violation or administrative decision</p>
+            </div>
+            
+            <p><strong>What this means:</strong></p>
+            <ul>
+                <li>This voucher can no longer be used for any purchases</li>
+                <li>If you have already used this voucher, this action does not affect your past transactions</li>
+                <li>You may still have other active vouchers or discount packages on your account</li>
+            </ul>
+            
+            <p>If you have questions about this revocation or believe this was done in error, please contact our customer support team.</p>
+            
+            <p>Thank you for your understanding.</p>
+        </div>
+        
+        <div class="footer">
+            <p>© <span th:text="${currentYear}">2024</span> Metroll. All rights reserved.</p>
+            <p>This is an automated email. Please do not reply to this message.</p>
+        </div>
+    </div>
+</body>
+</html> 

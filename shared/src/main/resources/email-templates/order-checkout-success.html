@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Metroll - Order Confirmation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .email-container {
+            background-color: #ffffff;
+            margin: 20px;
+            padding: 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 8px 8px 0 0;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        .content {
+            padding: 30px;
+        }
+        .content h2 {
+            color: #2c3e50;
+            margin-top: 0;
+        }
+        .info-box {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .info-box h3 {
+            color: #2c3e50;
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        .info-label {
+            font-weight: bold;
+            color: #555;
+        }
+        .info-value {
+            color: #333;
+        }
+        .footer {
+            background-color: #f8f9fa;
+            color: #666;
+            text-align: center;
+            padding: 20px;
+            font-size: 12px;
+            border-radius: 0 0 8px 8px;
+            border-top: 1px solid #e9ecef;
+        }
+        .amount {
+            font-weight: bold;
+            font-size: 18px;
+            color: #27ae60;
+        }
+        .order-id {
+            background-color: #e8f4f8;
+            border: 1px solid #bee5eb;
+            border-radius: 4px;
+            padding: 15px;
+            text-align: center;
+            margin: 20px 0;
+            font-size: 16px;
+            font-weight: bold;
+            color: #0c5460;
+        }
+        .success-icon {
+            color: #27ae60;
+            font-size: 48px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .order-items {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .order-item {
+            border-bottom: 1px solid #e9ecef;
+            padding: 10px 0;
+        }
+        .order-item:last-child {
+            border-bottom: none;
+        }
+        .order-item h4 {
+            margin: 0 0 5px 0;
+            color: #2c3e50;
+        }
+        .order-item p {
+            margin: 0;
+            color: #666;
+            font-size: 14px;
+        }
+        .total-section {
+            background-color: #e8f5e8;
+            border: 1px solid #c3e6cb;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        .total-row.final {
+            border-top: 1px solid #c3e6cb;
+            padding-top: 10px;
+            margin-top: 10px;
+            font-weight: bold;
+            font-size: 18px;
+        }
+        .button {
+            display: inline-block;
+            background-color: #3498db;
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+        
+        @media only screen and (max-width: 600px) {
+            .email-container {
+                margin: 10px;
+            }
+            .content {
+                padding: 20px;
+            }
+            .info-row, .total-row {
+                flex-direction: column;
+            }
+            .info-label {
+                margin-bottom: 2px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="header">
+            <h1>Metroll</h1>
+            <p>Metro Ticketing System</p>
+        </div>
+        
+        <div class="content">
+            <div class="success-icon">✓</div>
+            
+            <h2>Order Confirmation</h2>
+            
+            <p>Dear <span th:text="${recipientName}">Customer</span>,</p>
+            
+            <p>Thank you for your order! Your metro tickets have been successfully processed and are ready for use.</p>
+            
+            <div class="order-id">
+                Order #<span th:text="${orderId}">ORD123456</span>
+            </div>
+            
+            <div class="info-box">
+                <h3>Order Details</h3>
+                <div class="info-row">
+                    <span class="info-label">Order ID:</span>
+                    <span class="info-value" th:text="${orderId}">ORD123456</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Transaction Reference:</span>
+                    <span class="info-value" th:text="${transactionReference}">TXN-123456</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Order Date:</span>
+                    <span class="info-value" th:text="${orderDate}">January 1, 2024</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Payment Method:</span>
+                    <span class="info-value" th:text="${paymentMethod}">Credit Card</span>
+                </div>
+                <div class="info-row" th:if="${staffName != null}">
+                    <span class="info-label">Processed By:</span>
+                    <span class="info-value" th:text="${staffName}">Staff Member</span>
+                </div>
+            </div>
+            
+            <div class="order-items">
+                <h3>Your Tickets</h3>
+                <div th:each="item : ${orderItems}" class="order-item">
+                    <h4 th:text="${item.ticketType}">P2P Ticket</h4>
+                    <p th:text="${item.description}">From Station A to Station B</p>
+                    <div class="info-row">
+                        <span class="info-label">Ticket ID:</span>
+                        <span class="info-value" th:text="${item.ticketId}">TKT123456</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Valid Until:</span>
+                        <span class="info-value" th:text="${item.validUntil}">January 2, 2024</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Price:</span>
+                        <span class="info-value" th:text="${#numbers.formatCurrency(item.finalTotal)}">$5.00</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="total-section">
+                <h3>Order Summary</h3>
+                <div class="total-row">
+                    <span>Subtotal:</span>
+                    <span th:text="${#numbers.formatCurrency(baseTotal)}">$20.00</span>
+                </div>
+                <div class="total-row" th:if="${discountTotal != null and discountTotal > 0}">
+                    <span>Discount:</span>
+                    <span th:text="'-' + ${#numbers.formatCurrency(discountTotal)}">-$5.00</span>
+                </div>
+                <div class="total-row" th:if="${voucherCode != null}">
+                    <span>Voucher (<span th:text="${voucherCode}">VOUCHER123</span>):</span>
+                    <span>Applied</span>
+                </div>
+                <div class="total-row" th:if="${discountPackageName != null}">
+                    <span>Discount Package:</span>
+                    <span th:text="${discountPackageName}">Student Discount</span>
+                </div>
+                <div class="total-row final">
+                    <span>Total Paid:</span>
+                    <span class="amount" th:text="${#numbers.formatCurrency(finalTotal)}">$15.00</span>
+                </div>
+            </div>
+            
+            <div th:if="${paymentUrl != null}" class="info-box">
+                <h3>Payment Information</h3>
+                <p>Complete your payment using the link below:</p>
+                <a th:href="${paymentUrl}" class="button">Complete Payment</a>
+            </div>
+            
+            <p><strong>How to use your tickets:</strong></p>
+            <ol>
+                <li>Open the Metroll app on your mobile device</li>
+                <li>Go to "My Tickets" section</li>
+                <li>Find your ticket and tap to activate</li>
+                <li>Show the QR code to the metro station scanner</li>
+            </ol>
+            
+            <p><strong>Important:</strong> Your tickets are valid until the expiration date listed above. Please make sure to use them before they expire.</p>
+            
+            <p>Thank you for choosing Metroll for your metro transportation needs!</p>
+        </div>
+        
+        <div class="footer">
+            <p>© <span th:text="${currentYear}">2024</span> Metroll. All rights reserved.</p>
+            <p>This is an automated email. Please do not reply to this message.</p>
+        </div>
+    </div>
+</body>
+</html> 
