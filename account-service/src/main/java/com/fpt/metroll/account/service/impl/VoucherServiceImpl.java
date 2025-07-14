@@ -1,18 +1,23 @@
 package com.fpt.metroll.account.service.impl;
 
+import com.fpt.metroll.account.document.Account;
 import com.fpt.metroll.account.document.Voucher;
 import com.fpt.metroll.account.domain.dto.VoucherCreateRequest;
 import com.fpt.metroll.account.domain.dto.VoucherUpdateRequest;
 import com.fpt.metroll.account.domain.mapper.VoucherMapper;
+import com.fpt.metroll.account.repository.AccountRepository;
 import com.fpt.metroll.account.repository.VoucherRepository;
 import com.fpt.metroll.account.service.VoucherService;
 import com.fpt.metroll.shared.domain.dto.PageDto;
 import com.fpt.metroll.shared.domain.dto.PageableDto;
+import com.fpt.metroll.shared.domain.dto.email.VoucherEmailContext;
 import com.fpt.metroll.shared.domain.dto.voucher.VoucherDto;
 import com.fpt.metroll.shared.domain.enums.AccountRole;
+import com.fpt.metroll.shared.domain.enums.EmailType;
 import com.fpt.metroll.shared.domain.enums.VoucherStatus;
 import com.fpt.metroll.shared.domain.mapper.PageMapper;
 import com.fpt.metroll.shared.exception.NoPermissionException;
+import com.fpt.metroll.shared.service.EmailService;
 import com.fpt.metroll.shared.util.MongoHelper;
 import com.fpt.metroll.shared.util.SecurityUtil;
 import lombok.extern.slf4j.Slf4j;
@@ -35,13 +40,17 @@ public class VoucherServiceImpl implements VoucherService {
     private final MongoHelper mongoHelper;
     private final VoucherMapper voucherMapper;
     private final VoucherRepository voucherRepository;
+    private final EmailService emailService;
+    private final AccountRepository accountRepository;
 
     public VoucherServiceImpl(MongoHelper mongoHelper,
-            VoucherMapper voucherMapper,
-            VoucherRepository voucherRepository) {
+                              VoucherMapper voucherMapper,
+                              VoucherRepository voucherRepository, EmailService emailService, AccountRepository accountRepository) {
         this.mongoHelper = mongoHelper;
         this.voucherMapper = voucherMapper;
         this.voucherRepository = voucherRepository;
+        this.emailService = emailService;
+        this.accountRepository = accountRepository;
     }
 
     private void validateVoucherAmounts(BigDecimal discountAmount, BigDecimal minTransactionAmount) {
@@ -125,6 +134,21 @@ public class VoucherServiceImpl implements VoucherService {
                     do {
                         code = UUID.randomUUID().toString().substring(0, 8).toUpperCase();
                     } while (voucherRepository.existsByCode(code));
+                    Account account = accountRepository.findById(ownerId)
+                            .orElseThrow(() -> new IllegalArgumentException("Account not found"));
+                    emailService.sendVoucherEmail(account.getEmail(), account.getFullName(),
+                            EmailType.VOUCHER_CLAIMED, VoucherEmailContext.builder()
+                                    .voucherCode(code)
+                                    .discountAmount(request.getDiscountAmount())
+                                    .minTransactionAmount(request.getMinTransactionAmount())
+                                    .validFrom(request.getValidFrom())
+                                    .validUntil(request.getValidUntil())
+                                    .status("CLAIMED")
+                                    .actionDate(Instant.now())
+                                    .actionPerformedBy(SecurityUtil.requireUserRole().name())
+                                    .actionReason("Claimed by "+ SecurityUtil.requireUserRole().name())
+                                    .build()
+                    );
 
                     return Voucher.builder()
                             .ownerId(ownerId)
@@ -183,7 +207,22 @@ public class VoucherServiceImpl implements VoucherService {
 
         if (voucher.getStatus() != VoucherStatus.VALID)
             throw new IllegalStateException("Can only revoke VALID vouchers");
-
+        Account account = accountRepository.findById(voucher.getOwnerId())
+                .orElseThrow(() -> new IllegalArgumentException("Account not found"));
+        String code = voucher.getCode();
+        emailService.sendVoucherEmail(account.getEmail(), account.getFullName(),
+                EmailType.VOUCHER_REVOKED, VoucherEmailContext.builder()
+                        .voucherCode(code)
+                        .discountAmount(voucher.getDiscountAmount())
+                        .minTransactionAmount(voucher.getMinTransactionAmount())
+                        .validFrom(voucher.getValidFrom())
+                        .validUntil(voucher.getValidUntil())
+                        .status("Revoked")
+                        .actionDate(Instant.now())
+                        .actionPerformedBy(SecurityUtil.requireUserRole().name())
+                        .actionReason("Revoked by " + SecurityUtil.requireUserRole().name())
+                        .build()
+        );
         voucher.setStatus(VoucherStatus.REVOKED);
         voucherRepository.save(voucher);
     }
@@ -195,7 +234,7 @@ public class VoucherServiceImpl implements VoucherService {
         Voucher voucher = voucherRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Voucher not found"));
 
-        if(!voucher.getOwnerId().equals(SecurityUtil.requireUserId()))
+        if (!voucher.getOwnerId().equals(SecurityUtil.requireUserId()))
             throw new NoPermissionException();
 
         if (voucher.getStatus() != VoucherStatus.VALID)

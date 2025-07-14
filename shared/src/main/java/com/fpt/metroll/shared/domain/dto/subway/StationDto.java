@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.Instant;
 import java.util.List;
 
 @Data
@@ -22,6 +23,9 @@ public class StationDto {
     private String status;
     private String description;
     private List<LineStationInfoDto> lineStationInfos;
+
+    private Instant createdAt;
+    private Instant updatedAt;
 
     @Data
     @NoArgsConstructor

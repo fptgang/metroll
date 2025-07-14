@@ -7,14 +7,13 @@ import com.fpt.metroll.order.repository.OrderRepository;
 import com.fpt.metroll.order.repository.OrderDetailRepository;
 import com.fpt.metroll.order.service.OrderService;
 import com.fpt.metroll.order.service.PayOSService;
-import com.fpt.metroll.shared.domain.client.AccountDiscountPackageClient;
-import com.fpt.metroll.shared.domain.client.DiscountPackageClient;
-import com.fpt.metroll.shared.domain.client.TicketClient;
-import com.fpt.metroll.shared.domain.client.VoucherClient;
+import com.fpt.metroll.shared.domain.client.*;
 import com.fpt.metroll.shared.domain.dto.PageDto;
 import com.fpt.metroll.shared.domain.dto.PageableDto;
+import com.fpt.metroll.shared.domain.dto.account.AccountDto;
 import com.fpt.metroll.shared.domain.dto.discount.AccountDiscountPackageDto;
 import com.fpt.metroll.shared.domain.dto.discount.DiscountPackageDto;
+import com.fpt.metroll.shared.domain.dto.email.OrderEmailContext;
 import com.fpt.metroll.shared.domain.dto.order.CheckoutItemRequest;
 import com.fpt.metroll.shared.domain.dto.order.CheckoutRequest;
 import com.fpt.metroll.shared.domain.dto.order.OrderDto;
@@ -24,12 +23,10 @@ import com.fpt.metroll.shared.domain.dto.ticket.TicketDto;
 import com.fpt.metroll.shared.domain.dto.ticket.TicketUpsertRequest;
 import com.fpt.metroll.shared.domain.dto.ticket.TimedTicketPlanDto;
 import com.fpt.metroll.shared.domain.dto.voucher.VoucherDto;
-import com.fpt.metroll.shared.domain.enums.AccountRole;
-import com.fpt.metroll.shared.domain.enums.OrderStatus;
-import com.fpt.metroll.shared.domain.enums.TicketStatus;
-import com.fpt.metroll.shared.domain.enums.TicketType;
+import com.fpt.metroll.shared.domain.enums.*;
 import com.fpt.metroll.shared.domain.mapper.PageMapper;
 import com.fpt.metroll.shared.exception.NoPermissionException;
+import com.fpt.metroll.shared.service.EmailService;
 import com.fpt.metroll.shared.util.SecurityUtil;
 import com.google.common.base.Preconditions;
 import lombok.extern.slf4j.Slf4j;
@@ -58,6 +55,8 @@ public class OrderServiceImpl implements OrderService {
     private final AccountDiscountPackageClient accountDiscountPackageClient;
     private final PayOSService payOSService;
     private final DiscountPackageClient discountPackageClient;
+    private final AccountClient accountClient;
+    private final EmailService emailService;
 
     public OrderServiceImpl(OrderRepository orderRepository,
                             OrderDetailRepository orderDetailRepository,
@@ -65,7 +64,7 @@ public class OrderServiceImpl implements OrderService {
                             TicketClient ticketClient,
                             VoucherClient voucherClient,
                             AccountDiscountPackageClient accountDiscountPackageClient,
-                            PayOSService payOSService, DiscountPackageClient discountPackageClient) {
+                            PayOSService payOSService, DiscountPackageClient discountPackageClient, AccountClient accountClient, EmailService emailService) {
         this.orderRepository = orderRepository;
         this.orderDetailRepository = orderDetailRepository;
         this.orderMapper = orderMapper;
@@ -74,6 +73,8 @@ public class OrderServiceImpl implements OrderService {
         this.accountDiscountPackageClient = accountDiscountPackageClient;
         this.payOSService = payOSService;
         this.discountPackageClient = discountPackageClient;
+        this.accountClient = accountClient;
+        this.emailService = emailService;
     }
 
     @Override
@@ -527,5 +528,109 @@ public class OrderServiceImpl implements OrderService {
                 .voucherId(originalRequest.getVoucherId())
                 .customerId(originalRequest.getCustomerId())
                 .build();
+    }
+
+    private void sendOrderEmail(Order order, EmailType emailType) {
+        try {
+            // Get customer account information
+            AccountDto customerAccount = accountClient.getAccount(order.getCustomerId());
+
+            // Get staff account information if order was created by staff
+            String staffName = null;
+            if (order.getStaffId() != null) {
+                try {
+                    AccountDto staffAccount = accountClient.getAccount(order.getStaffId());
+                    staffName = staffAccount.getFullName();
+                } catch (Exception e) {
+                    log.warn("Failed to get staff information for order {}", order.getId(), e);
+                }
+            }
+
+            // Get voucher code if used
+            String voucherCode = null;
+            if (order.getVoucher() != null) {
+                try {
+                    VoucherDto voucher = voucherClient.getVoucher(order.getVoucher());
+                    voucherCode = voucher.getCode();
+                } catch (Exception e) {
+                    log.warn("Failed to get voucher information for order {}", order.getId(), e);
+                }
+            }
+
+            // Get discount package name if used
+            String discountPackageName = null;
+            if (order.getDiscountPackage() != null) {
+                try {
+                    DiscountPackageDto discountPackage = discountPackageClient.getDiscountPackage(order.getDiscountPackage());
+                    discountPackageName = discountPackage.getName();
+                } catch (Exception e) {
+                    log.warn("Failed to get discount package information for order {}", order.getId(), e);
+                }
+            }
+
+            // Build order items for email
+            List<OrderEmailContext.OrderItemContext> orderItems = new ArrayList<>();
+            for (OrderDetail detail : order.getOrderDetails()) {
+                String description = buildOrderItemDescription(detail);
+
+                OrderEmailContext.OrderItemContext itemContext = OrderEmailContext.OrderItemContext.builder()
+                        .ticketType(detail.getTicketType().name())
+                        .description(description)
+                        .unitPrice(detail.getUnitPrice())
+                        .baseTotal(detail.getBaseTotal())
+                        .discountTotal(detail.getDiscountTotal())
+                        .finalTotal(detail.getFinalTotal())
+                        .ticketId(detail.getTicketId())
+                        .validUntil(calculateValidUntil(detail))
+                        .build();
+
+                orderItems.add(itemContext);
+            }
+
+            // Build email context
+            OrderEmailContext context = OrderEmailContext.builder()
+                    .orderId(order.getId())
+                    .transactionReference(order.getTransactionReference())
+                    .baseTotal(order.getBaseTotal())
+                    .discountTotal(order.getDiscountTotal())
+                    .finalTotal(order.getFinalTotal())
+                    .paymentMethod(order.getPaymentMethod())
+                    .status(order.getStatus().name())
+                    .orderDate(order.getCreatedAt())
+                    .orderItems(orderItems)
+                    .voucherCode(voucherCode)
+                    .discountPackageName(discountPackageName)
+                    .staffName(staffName)
+                    .paymentUrl(order.getPaymentUrl())
+                    .build();
+
+            // Send email
+            emailService.sendOrderEmail(
+                    customerAccount.getEmail(),
+                    customerAccount.getFullName(),
+                    emailType,
+                    context
+            );
+
+            log.info("Order email sent successfully to {} for order {}", customerAccount.getEmail(), order.getId());
+        } catch (Exception e) {
+            log.error("Failed to send order email for order {}: {}", order.getId(), e.getMessage(), e);
+            // Don't throw exception - email failure should not affect order operations
+        }
+    }
+
+    private String buildOrderItemDescription(OrderDetail detail) {
+        try {
+            if (detail.getTicketType() == TicketType.P2P && detail.getP2pJourney() != null) {
+                P2PJourneyDto journey = ticketClient.getP2PJourneyById(detail.getP2pJourney());
+                return String.format("P2P Journey: %s to %s", journey.getStartStationId(), journey.getEndStationId());
+            } else if (detail.getTicketType() == TicketType.TIMED && detail.getTimedTicketPlan() != null) {
+                TimedTicketPlanDto plan = ticketClient.getTimedTicketPlanById(detail.getTimedTicketPlan());
+                return String.format("Timed Ticket: %s (%d days)", plan.getName(), plan.getValidDuration());
+            }
+        } catch (Exception e) {
+            log.warn("Failed to build description for order detail {}", detail.getId(), e);
+        }
+        return detail.getTicketType().name() + " Ticket";
     }
 }

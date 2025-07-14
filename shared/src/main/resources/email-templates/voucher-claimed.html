@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Metroll - Voucher Claimed</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .email-container {
+            background-color: #ffffff;
+            margin: 20px;
+            padding: 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 8px 8px 0 0;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        .content {
+            padding: 30px;
+        }
+        .content h2 {
+            color: #2c3e50;
+            margin-top: 0;
+        }
+        .info-box {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .info-box h3 {
+            color: #2c3e50;
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        .info-label {
+            font-weight: bold;
+            color: #555;
+        }
+        .info-value {
+            color: #333;
+        }
+        .footer {
+            background-color: #f8f9fa;
+            color: #666;
+            text-align: center;
+            padding: 20px;
+            font-size: 12px;
+            border-radius: 0 0 8px 8px;
+            border-top: 1px solid #e9ecef;
+        }
+        .amount {
+            font-weight: bold;
+            font-size: 18px;
+            color: #27ae60;
+        }
+        .voucher-code {
+            background-color: #e8f5e8;
+            border: 2px dashed #27ae60;
+            border-radius: 4px;
+            padding: 15px;
+            text-align: center;
+            margin: 20px 0;
+            font-size: 20px;
+            font-weight: bold;
+            color: #27ae60;
+            letter-spacing: 2px;
+        }
+        .success-icon {
+            color: #27ae60;
+            font-size: 48px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        @media only screen and (max-width: 600px) {
+            .email-container {
+                margin: 10px;
+            }
+            .content {
+                padding: 20px;
+            }
+            .info-row {
+                flex-direction: column;
+            }
+            .info-label {
+                margin-bottom: 2px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="header">
+            <h1>Metroll</h1>
+            <p>Metro Ticketing System</p>
+        </div>
+        
+        <div class="content">
+            <div class="success-icon">✓</div>
+            
+            <h2>Voucher Claimed Successfully!</h2>
+            
+            <p>Dear <span th:text="${recipientName}">Customer</span>,</p>
+            
+            <p>Great news! You have successfully claimed a voucher for your Metroll account. You can now use this voucher for your next metro ticket purchase.</p>
+            
+            <div class="voucher-code">
+                <span th:text="${voucherCode}">VOUCHER123</span>
+            </div>
+            
+            <div class="info-box">
+                <h3>Voucher Details</h3>
+                <div class="info-row">
+                    <span class="info-label">Voucher Code:</span>
+                    <span class="info-value" th:text="${voucherCode}">VOUCHER123</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Discount Amount:</span>
+                    <span class="info-value amount" th:text="${#numbers.formatCurrency(discountAmount)}">$10.00</span>
+                </div>
+                <div class="info-row" th:if="${minTransactionAmount != null}">
+                    <span class="info-label">Minimum Purchase:</span>
+                    <span class="info-value" th:text="${#numbers.formatCurrency(minTransactionAmount)}">$20.00</span>
+                </div>
+                <div class="info-row" th:if="${validFrom != null and validFrom != 'N/A'}">
+                    <span class="info-label">Valid From:</span>
+                    <span class="info-value" th:text="${validFrom}">January 1, 2024</span>
+                </div>
+                <div class="info-row" th:if="${validUntil != null and validUntil != 'N/A'}">
+                    <span class="info-label">Valid Until:</span>
+                    <span class="info-value" th:text="${validUntil}">December 31, 2024</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Claimed On:</span>
+                    <span class="info-value" th:text="${actionDate}">January 1, 2024</span>
+                </div>
+            </div>
+            
+            <p><strong>How to use your voucher:</strong></p>
+            <ol>
+                <li>Select your metro tickets in the Metroll app</li>
+                <li>Proceed to checkout</li>
+                <li>Enter your voucher code: <strong th:text="${voucherCode}">VOUCHER123</strong></li>
+                <li>Enjoy your discount!</li>
+            </ol>
+            
+            <p><strong>Important:</strong> This voucher can only be used once. Make sure to use it before the expiration date.</p>
+            
+            <p>Thank you for choosing Metroll for your metro transportation needs!</p>
+        </div>
+        
+        <div class="footer">
+            <p>© <span th:text="${currentYear}">2024</span> Metroll. All rights reserved.</p>
+            <p>This is an automated email. Please do not reply to this message.</p>
+        </div>
+    </div>
+</body>
+</html> 
