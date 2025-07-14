@@ -10,13 +10,16 @@ import com.fpt.metroll.shared.service.EmailService;
 import com.fpt.metroll.shared.util.DateTimeUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 import org.thymeleaf.context.Context;
 import org.thymeleaf.spring6.SpringTemplateEngine;
 
-import jakarta.mail.internet.MimeMessage;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -24,15 +27,14 @@ import java.util.Map;
 @Slf4j
 public class EmailServiceImpl implements EmailService {
 
-    private final JavaMailSender mailSender;
+    private final RestTemplate restTemplate;
     private final SpringTemplateEngine templateEngine;
     private final EmailConfig emailConfig;
+    private final String RESEND_API_URL = "https://api.resend.com/emails";
 
     @Autowired
-    public EmailServiceImpl(JavaMailSender mailSender,
-            SpringTemplateEngine templateEngine,
-            EmailConfig emailConfig) {
-        this.mailSender = mailSender;
+    public EmailServiceImpl(SpringTemplateEngine templateEngine, EmailConfig emailConfig) {
+        this.restTemplate = new RestTemplate();
         this.templateEngine = templateEngine;
         this.emailConfig = emailConfig;
     }
@@ -40,12 +42,14 @@ public class EmailServiceImpl implements EmailService {
     @Override
     public void sendEmail(EmailRequest emailRequest) {
         try {
-            MimeMessage mimeMessage = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setBearerAuth(emailConfig.getApiKey());
 
-            helper.setFrom(emailConfig.getFromEmail(), emailConfig.getFromName());
-            helper.setTo(emailRequest.getRecipientEmail());
-            helper.setSubject(emailRequest.getSubject());
+            Map<String, Object> emailData = new HashMap<>();
+            emailData.put("from", emailConfig.getFromName() + " <" + emailConfig.getFromEmail() + ">");
+            emailData.put("to", new String[] { emailRequest.getRecipientEmail() });
+            emailData.put("subject", emailRequest.getSubject());
 
             if (emailRequest.isHtml() && emailRequest.getTemplateName() != null) {
                 Context context = new Context();
@@ -53,13 +57,24 @@ public class EmailServiceImpl implements EmailService {
                     context.setVariables(emailRequest.getTemplateVariables());
                 }
                 String htmlContent = templateEngine.process(emailRequest.getTemplateName(), context);
-                helper.setText(htmlContent, true);
+                emailData.put("html", htmlContent);
             } else {
-                helper.setText(emailRequest.getSubject(), false);
+                emailData.put("text", emailRequest.getSubject());
             }
 
-            mailSender.send(mimeMessage);
-            log.info("Email sent successfully to {}", emailRequest.getRecipientEmail());
+            HttpEntity<Map<String, Object>> request = new HttpEntity<>(emailData, headers);
+            ResponseEntity<Map> response = restTemplate.exchange(
+                    RESEND_API_URL,
+                    HttpMethod.POST,
+                    request,
+                    Map.class);
+
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                String emailId = (String) response.getBody().get("id");
+                log.info("Email sent successfully to {} with ID: {}", emailRequest.getRecipientEmail(), emailId);
+            } else {
+                throw new RuntimeException("Failed to send email: " + response.getStatusCode());
+            }
         } catch (Exception e) {
             log.error("Failed to send email to {}: {}", emailRequest.getRecipientEmail(), e.getMessage(), e);
             throw new RuntimeException("Failed to send email", e);

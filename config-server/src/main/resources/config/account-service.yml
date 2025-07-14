@@ -12,7 +12,7 @@ spring:
   data:
     mongodb:
       uri: ${DATABASE_ACCOUNT_SERVICE}
-      ssl: {enabled: true}
+      ssl: { enabled: true }
 
   cloud:
     stream:
@@ -55,24 +55,14 @@ metroll:
   exception:
     log: true
   email:
-    host: ${EMAIL_HOST:smtp.gmail.com}
-    port: ${EMAIL_PORT:587}
-    username: ${EMAIL_USERNAME:}
-    password: ${EMAIL_PASSWORD:}
-    protocol: smtp
-    auth: ${EMAIL_AUTH:true}
-    starttls: ${EMAIL_STARTTLS:true}
-    debug: ${EMAIL_DEBUG:false}
+    api-key: ${RESEND_API_KEY:}
     from-email: ${EMAIL_FROM:noreply@metroll.com}
     from-name: ${EMAIL_FROM_NAME:Metroll}
-    connection-timeout: 5000
-    timeout: 5000
-    write-timeout: 5000
 
 springdoc:
   cache:
     disabled: true
-  version: '@springdoc.version@'
+  version: "@springdoc.version@"
 
 eureka:
   client:
