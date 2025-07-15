@@ -196,10 +196,6 @@ public class AccountDiscountPackageServiceImpl implements AccountDiscountPackage
         Account account = accountRepository.findById(accountDiscountPackage.getAccountId())
                 .orElseThrow(() -> new IllegalArgumentException("Account not found"));
 
-        if (account.getRole() != AccountRole.CUSTOMER) {
-            throw new IllegalStateException("Can only unassign discount package from CUSTOMER accounts");
-        }
-
         // Check if the discount package is ongoing
         if (accountDiscountPackage.getStatus() != AccountDiscountStatus.ACTIVATED ||
                 accountDiscountPackage.getValidUntil().isBefore(Instant.now())) {
