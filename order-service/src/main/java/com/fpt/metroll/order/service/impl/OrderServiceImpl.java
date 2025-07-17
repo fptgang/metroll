@@ -259,7 +259,7 @@ public class OrderServiceImpl implements OrderService {
         PageRequest pageRequest = PageRequest.of(
                 pageable.getPage(),
                 pageable.getSize(),
-                Sort.by(
+                pageable.getSort() == null ? Sort.by(Sort.Direction.DESC, "createdAt") : Sort.by(
                         pageable.getSort().entrySet().stream()
                                 .map(entry -> new Sort.Order(
                                         Sort.Direction.valueOf(entry.getValue().name()),
