@@ -60,6 +60,9 @@ public class VoucherServiceImpl implements VoucherService {
         if (minTransactionAmount != null && minTransactionAmount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Minimum transaction amount must be positive");
         }
+        if (minTransactionAmount != null && discountAmount != null && minTransactionAmount.compareTo(discountAmount) > 0) {
+            throw new IllegalArgumentException("Minimum transaction amount must be greater than discount amount");
+        }
     }
 
     private void validateValidityDates(Instant validFrom, Instant validUntil) {
