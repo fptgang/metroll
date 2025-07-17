@@ -22,7 +22,7 @@ public abstract class AccountDiscountPackageMapperDecorator implements AccountDi
         AccountDiscountPackageDto dto = delegate.toDto(accountDiscountPackage);
         
         // Populate the account field using AccountService.requireBasicById
-        if (accountDiscountPackage.getAccountId() != null) {
+        if (accountDiscountPackage != null && accountDiscountPackage.getAccountId() != null) {
             try {
                 SecurityUtil.elevate(AccountRole.ADMIN, () -> {
                     dto.setAccount(accountService.requireBasicById(accountDiscountPackage.getAccountId()));

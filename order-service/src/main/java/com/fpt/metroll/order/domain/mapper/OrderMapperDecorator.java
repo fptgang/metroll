@@ -24,7 +24,7 @@ public abstract class OrderMapperDecorator implements OrderMapper {
         OrderDto dto = delegate.toDto(order);
         
         // Populate the staff field using AccountClient
-        if (order.getStaffId() != null) {
+        if (order != null && order.getStaffId() != null) {
             try {
                 SecurityUtil.elevate(AccountRole.ADMIN, () -> {
                     dto.setStaff(accountClient.getAccountBasic(order.getStaffId()));
@@ -37,7 +37,7 @@ public abstract class OrderMapperDecorator implements OrderMapper {
         }
         
         // Populate the customer field using AccountClient
-        if (order.getCustomerId() != null) {
+        if (order != null && order.getCustomerId() != null) {
             try {
                 SecurityUtil.elevate(AccountRole.ADMIN, () -> {
                     dto.setCustomer(accountClient.getAccountBasic(order.getCustomerId()));

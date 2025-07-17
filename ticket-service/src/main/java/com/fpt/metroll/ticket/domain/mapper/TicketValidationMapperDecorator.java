@@ -24,7 +24,7 @@ public abstract class TicketValidationMapperDecorator implements TicketValidatio
         TicketValidationDto dto = delegate.toDto(document);
         
         // Populate the validator field using AccountClient
-        if (document.getValidatorId() != null) {
+        if (document != null && document.getValidatorId() != null) {
             try {
                 SecurityUtil.elevate(AccountRole.ADMIN, () -> {
                     dto.setValidator(accountClient.getAccountBasic(document.getValidatorId()));
