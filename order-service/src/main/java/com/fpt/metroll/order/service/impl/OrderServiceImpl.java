@@ -181,6 +181,7 @@ public class OrderServiceImpl implements OrderService {
         // Create PayOS payment link only for PAYOS payment method
         if ("PAYOS".equals(checkoutRequest.getPaymentMethod())) {
             createPayOSPaymentLink(order);
+            sendOrderEmail(order, EmailType.ORDER_PAYMENT_CONFIRMATION);
         } else {
             // For CASH and VNPAY payments, complete the order immediately
             if (SecurityUtil.hasRole(AccountRole.STAFF, AccountRole.ADMIN)) {
@@ -189,6 +190,7 @@ public class OrderServiceImpl implements OrderService {
                 createTicketsForOrder(order);
             }
         }
+
 
         log.info("Created order {} for customer {} with staff {} and final total {}",
                 order.getId(), customerId, staffId, finalTotal);
