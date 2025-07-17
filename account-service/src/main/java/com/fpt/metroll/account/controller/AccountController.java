@@ -8,6 +8,7 @@ import com.fpt.metroll.account.service.AccountService;
 import com.fpt.metroll.account.service.AuthService;
 import com.fpt.metroll.shared.domain.dto.PageDto;
 import com.fpt.metroll.shared.domain.dto.PageableDto;
+import com.fpt.metroll.shared.domain.dto.account.AccountBasicDto;
 import com.fpt.metroll.shared.domain.dto.account.AccountDto;
 import com.fpt.metroll.shared.util.SecurityUtil;
 import io.swagger.v3.oas.annotations.Operation;
@@ -79,6 +80,12 @@ public class AccountController {
     @GetMapping("/{id}")
     public ResponseEntity<AccountDto> getAccountById(@PathVariable("id") String id) {
         return ResponseEntity.ok(accountService.requireById(id));
+    }
+
+    @Operation(summary = "Get account by ID")
+    @GetMapping("/basic/{id}")
+    public ResponseEntity<AccountBasicDto> getBasicAccountById(@PathVariable("id") String id) {
+        return ResponseEntity.ok(accountService.requireBasicById(id));
     }
 
     @Operation(summary = "Update account")

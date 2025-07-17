@@ -5,8 +5,10 @@ import com.fpt.metroll.ticket.domain.dto.TicketValidationCreateRequest;
 import com.fpt.metroll.shared.domain.dto.ticket.TicketValidationDto;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.DecoratedWith;
 
 @Mapper(componentModel = "spring")
+@DecoratedWith(TicketValidationMapperDecorator.class)
 public interface TicketValidationMapper {
     TicketValidationDto toDto(TicketValidation document);
 

@@ -1,5 +1,6 @@
 package com.fpt.metroll.shared.domain.dto.ticket;
 
+import com.fpt.metroll.shared.domain.dto.account.AccountBasicDto;
 import com.fpt.metroll.shared.domain.enums.ValidationType;
 import lombok.Builder;
 import lombok.Data;
@@ -19,5 +20,6 @@ public class TicketValidationDto {
     private ValidationType validationType;
     private Instant validationTime;
     private String validatorId;
+    private AccountBasicDto validator; // Reference to Account
     private Instant createdAt;
 }

@@ -6,6 +6,7 @@ import com.fpt.metroll.account.domain.dto.AccountUpdateRequest;
 import com.fpt.metroll.account.domain.dto.StationAssignRequest;
 import com.fpt.metroll.shared.domain.dto.PageDto;
 import com.fpt.metroll.shared.domain.dto.PageableDto;
+import com.fpt.metroll.shared.domain.dto.account.AccountBasicDto;
 import com.fpt.metroll.shared.domain.dto.account.AccountDto;
 
 import java.util.Optional;
@@ -18,6 +19,8 @@ public interface AccountService {
     Optional<AccountDto> findById(String id);
 
     AccountDto requireById(String id);
+
+    AccountBasicDto requireBasicById(String id);
 
     AccountDto create(AccountCreateRequest request);
 

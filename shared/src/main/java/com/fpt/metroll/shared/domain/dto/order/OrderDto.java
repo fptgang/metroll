@@ -1,5 +1,6 @@
 package com.fpt.metroll.shared.domain.dto.order;
 
+import com.fpt.metroll.shared.domain.dto.account.AccountBasicDto;
 import com.fpt.metroll.shared.domain.enums.OrderStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -19,9 +20,11 @@ public class OrderDto {
     
     // Nhân viên giúp mua vé offline
     private String staffId;
+    private AccountBasicDto staff; // Reference to Account
     
     // Khách hàng, có thể null nếu nhân viên ko nhập
     private String customerId;
+    private AccountBasicDto customer; // Reference to Account
     
     private String discountPackage; // Reference to AccountDiscountPackage._id
     private String voucher; // Reference to Voucher._id

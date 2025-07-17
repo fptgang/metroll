@@ -1,5 +1,6 @@
 package com.fpt.metroll.shared.domain.dto.voucher;
 
+import com.fpt.metroll.shared.domain.dto.account.AccountBasicDto;
 import com.fpt.metroll.shared.domain.enums.VoucherStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -15,6 +16,7 @@ import java.time.Instant;
 public class VoucherDto {
     private String id;
     private String ownerId;
+    private AccountBasicDto owner;
     private String code;
     private Double discountAmount;
     private Double minTransactionAmount;

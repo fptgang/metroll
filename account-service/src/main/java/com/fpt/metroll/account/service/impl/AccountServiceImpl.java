@@ -14,6 +14,7 @@ import com.fpt.metroll.account.repository.VoucherRepository;
 import com.fpt.metroll.account.service.AccountService;
 import com.fpt.metroll.shared.domain.dto.PageDto;
 import com.fpt.metroll.shared.domain.dto.PageableDto;
+import com.fpt.metroll.shared.domain.dto.account.AccountBasicDto;
 import com.fpt.metroll.shared.domain.dto.account.AccountDto;
 import com.fpt.metroll.shared.domain.enums.AccountRole;
 import com.fpt.metroll.shared.domain.enums.DiscountPackageStatus;
@@ -23,6 +24,8 @@ import com.fpt.metroll.shared.exception.NoPermissionException;
 import com.fpt.metroll.shared.util.MongoHelper;
 import com.fpt.metroll.shared.util.SecurityUtil;
 import com.google.common.base.Preconditions;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.data.mongodb.core.query.Criteria;
 import com.google.firebase.auth.FirebaseAuth;
@@ -125,6 +128,18 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
+    @Cacheable(value = "accountBasic", key = "#id")
+    public AccountBasicDto requireBasicById(String id) {
+        if (!SecurityUtil.hasRole(AccountRole.ADMIN, AccountRole.STAFF)
+                && !Objects.equals(SecurityUtil.getUserId(), id))
+            throw new NoPermissionException();
+
+        return accountRepository.findById(id)
+                .map(accountMapper::toBasicDto)
+                .orElseThrow(() -> new IllegalArgumentException("Account not found"));
+    }
+
+    @Override
     public AccountDto create(AccountCreateRequest request) {
         if (!SecurityUtil.hasRole(AccountRole.ADMIN))
             throw new NoPermissionException();
@@ -162,6 +177,7 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
+    @CacheEvict(value = "accountBasic", key = "#id")
     public AccountDto update(String id, AccountUpdateRequest request) {
         if (!SecurityUtil.hasRole(AccountRole.ADMIN, AccountRole.STAFF)
                 && !Objects.equals(SecurityUtil.getUserId(), id))
@@ -187,6 +203,7 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
+    @CacheEvict(value = "accountBasic", key = "#id")
     public void deactivate(String id) {
         if (!SecurityUtil.hasRole(AccountRole.ADMIN))
             throw new NoPermissionException();
@@ -204,6 +221,7 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
+    @CacheEvict(value = "accountBasic", key = "#id")
     public void activate(String id) {
         if (!SecurityUtil.hasRole(AccountRole.ADMIN))
             throw new NoPermissionException();

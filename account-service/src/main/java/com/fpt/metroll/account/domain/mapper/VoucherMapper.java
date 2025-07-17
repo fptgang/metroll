@@ -7,11 +7,13 @@ import com.fpt.metroll.shared.domain.dto.voucher.VoucherDto;
 import com.fpt.metroll.shared.domain.enums.AccountRole;
 import com.fpt.metroll.shared.util.SecurityUtil;
 import org.mapstruct.AfterMapping;
+import org.mapstruct.DecoratedWith;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 
 @Mapper(componentModel = "spring")
+@DecoratedWith(VoucherMapperDecorator.class)
 public interface VoucherMapper {
     VoucherDto toDto(Voucher voucher);
     Voucher toDocument(VoucherDto dto);
