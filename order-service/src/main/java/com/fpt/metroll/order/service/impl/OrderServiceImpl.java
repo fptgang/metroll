@@ -95,8 +95,7 @@ public class OrderServiceImpl implements OrderService {
         AccountDiscountPackageDto accountDiscountPackageDto = accountDiscountPackageClient.getMyActivatedDiscount();
 
         // Determine if this is a staff purchase
-        boolean isStaffPurchase = SecurityUtil.hasRole(AccountRole.STAFF, AccountRole.ADMIN) &&
-                checkoutRequest.getCustomerId() != null;
+        boolean isStaffPurchase = SecurityUtil.hasRole(AccountRole.STAFF, AccountRole.ADMIN);
 
         String customerId = isStaffPurchase ? checkoutRequest.getCustomerId() : currentUserId;
         String staffId = isStaffPurchase ? currentUserId : null;
@@ -260,7 +259,14 @@ public class OrderServiceImpl implements OrderService {
         PageRequest pageRequest = PageRequest.of(
                 pageable.getPage(),
                 pageable.getSize(),
-                Sort.by(Sort.Direction.DESC, "createdAt"));
+                Sort.by(
+                        pageable.getSort().entrySet().stream()
+                                .map(entry -> new Sort.Order(
+                                        Sort.Direction.valueOf(entry.getValue().name()),
+                                        entry.getKey()
+                                ))
+                                .toList()
+                ));
 
         Page<Order> res = orderRepository.findAll(spec, pageRequest);
         Page<OrderDto> dtoPage = res.map(this::convertToDto);

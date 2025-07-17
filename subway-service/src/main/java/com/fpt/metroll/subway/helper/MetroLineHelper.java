@@ -100,6 +100,8 @@ public class MetroLineHelper {
                 .status(line.getStatus().name())
                 .description(line.getDescription())
                 .segments(segmentDtos)
+                .createdAt(line.getCreatedAt())
+                .updatedAt(line.getUpdatedAt())
                 .build();
     }
 
