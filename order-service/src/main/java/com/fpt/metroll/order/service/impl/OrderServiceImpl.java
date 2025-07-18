@@ -167,7 +167,6 @@ public class OrderServiceImpl implements OrderService {
                 .finalTotal(finalTotal)
                 .paymentMethod(checkoutRequest.getPaymentMethod())
                 .status(OrderStatus.PENDING)
-                .transactionReference(generateTransactionReference())
                 .orderDetails(orderDetails)
                 .build();
 
@@ -182,6 +181,7 @@ public class OrderServiceImpl implements OrderService {
             order = orderRepository.save(order);
             createTicketsForOrder(order);
         } else if ("PAYOS".equals(checkoutRequest.getPaymentMethod())) {
+            order.setTransactionReference(generateTransactionReference());
             order = orderRepository.save(order);
             createPayOSPaymentLink(order);
             sendOrderEmail(order, EmailType.ORDER_PAYMENT_CONFIRMATION);
