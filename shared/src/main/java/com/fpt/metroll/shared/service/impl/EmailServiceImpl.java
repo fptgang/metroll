@@ -211,7 +211,7 @@ public class EmailServiceImpl implements EmailService {
             EmailRequest emailRequest = EmailRequest.builder()
                     .recipientEmail(recipientEmail)
                     .recipientName("Test User")
-                    .subject("MetRoll Email Service Test")
+                    .subject("MeTroll Email Service Test")
                     .templateName("test-email")
                     .templateVariables(variables)
                     .isHtml(true)
@@ -226,28 +226,28 @@ public class EmailServiceImpl implements EmailService {
     // Helper methods for email subjects
     private String getVoucherEmailSubject(EmailType emailType, VoucherEmailContext context) {
         return switch (emailType) {
-            case VOUCHER_CLAIMED -> "Your MetRoll Voucher Has Been Claimed";
-            case VOUCHER_REVOKED -> "Your MetRoll Voucher Has Been Revoked";
-            case VOUCHER_EXPIRED -> "Your MetRoll Voucher Has Expired";
-            default -> "MetRoll Voucher Update";
+            case VOUCHER_CLAIMED -> "Your MeTroll Voucher Has Been Claimed";
+            case VOUCHER_REVOKED -> "Your MeTroll Voucher Has Been Revoked";
+            case VOUCHER_EXPIRED -> "Your MeTroll Voucher Has Expired";
+            default -> "MeTroll Voucher Update";
         };
     }
 
     private String getDiscountPackageEmailSubject(EmailType emailType, DiscountPackageEmailContext context) {
         return switch (emailType) {
-            case DISCOUNT_PACKAGE_ASSIGNED -> "You've Been Assigned a MetRoll Discount Package";
-            case DISCOUNT_PACKAGE_UNASSIGNED -> "Your MetRoll Discount Package Has Been Removed";
-            case DISCOUNT_PACKAGE_EXPIRED -> "Your MetRoll Discount Package Has Expired";
-            default -> "MetRoll Discount Package Update";
+            case DISCOUNT_PACKAGE_ASSIGNED -> "You've Been Assigned a MeTroll Discount Package";
+            case DISCOUNT_PACKAGE_UNASSIGNED -> "Your MeTroll Discount Package Has Been Removed";
+            case DISCOUNT_PACKAGE_EXPIRED -> "Your MeTroll Discount Package Has Expired";
+            default -> "MeTroll Discount Package Update";
         };
     }
 
     private String getOrderEmailSubject(EmailType emailType, OrderEmailContext context) {
         return switch (emailType) {
-            case ORDER_CHECKOUT_SUCCESS -> "Order Confirmation - MetRoll";
-            case ORDER_PAYMENT_CONFIRMATION -> "Payment Confirmed - MetRoll";
-            case ORDER_PAYMENT_FAILED -> "Payment Failed - MetRoll";
-            default -> "MetRoll Order Update";
+            case ORDER_CHECKOUT_SUCCESS -> "Order Confirmation - MeTroll";
+            case ORDER_PAYMENT_CONFIRMATION -> "Payment Confirmed - MeTroll";
+            case ORDER_PAYMENT_FAILED -> "Payment Failed - MeTroll";
+            default -> "MeTroll Order Update";
         };
     }
 

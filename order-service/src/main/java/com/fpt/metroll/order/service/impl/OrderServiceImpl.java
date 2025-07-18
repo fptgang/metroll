@@ -152,7 +152,7 @@ public class OrderServiceImpl implements OrderService {
         // Distribute discount proportionally across order details
         distributeDiscount(orderDetails, totalDiscountAmount, baseTotal);
 
-        BigDecimal finalTotal = baseTotal.subtract(totalDiscountAmount);
+        BigDecimal finalTotal = baseTotal.subtract(totalDiscountAmount).max(BigDecimal.ZERO);
 
         var packageId = accountDiscountPackageDto != null ? accountDiscountPackageDto.getDiscountPackageId() : null;
 
@@ -176,21 +176,16 @@ public class OrderServiceImpl implements OrderService {
             detail.setOrder(order);
         }
 
-        order = orderRepository.save(order);
-
-        // Create PayOS payment link only for PAYOS payment method
-        if ("PAYOS".equals(checkoutRequest.getPaymentMethod())) {
+        if (SecurityUtil.hasRole(AccountRole.STAFF, AccountRole.ADMIN) ||
+                order.getFinalTotal().abs().compareTo(new BigDecimal("0.000001")) < 0) {
+            order.setStatus(OrderStatus.COMPLETED);
+            order = orderRepository.save(order);
+            createTicketsForOrder(order);
+        } else if ("PAYOS".equals(checkoutRequest.getPaymentMethod())) {
+            order = orderRepository.save(order);
             createPayOSPaymentLink(order);
             sendOrderEmail(order, EmailType.ORDER_PAYMENT_CONFIRMATION);
-        } else {
-            // For CASH and VNPAY payments, complete the order immediately
-            if (SecurityUtil.hasRole(AccountRole.STAFF, AccountRole.ADMIN)) {
-                order.setStatus(OrderStatus.COMPLETED);
-                orderRepository.save(order);
-                createTicketsForOrder(order);
-            }
         }
-
 
         log.info("Created order {} for customer {} with staff {} and final total {}",
                 order.getId(), customerId, staffId, finalTotal);
@@ -482,7 +477,7 @@ public class OrderServiceImpl implements OrderService {
             BigDecimal itemDiscount = totalDiscount.multiply(proportion).setScale(2, BigDecimal.ROUND_HALF_UP);
 
             detail.setDiscountTotal(itemDiscount);
-            detail.setFinalTotal(detail.getBaseTotal().subtract(itemDiscount));
+            detail.setFinalTotal(detail.getBaseTotal().subtract(itemDiscount).max(BigDecimal.ZERO));
         }
     }
 
