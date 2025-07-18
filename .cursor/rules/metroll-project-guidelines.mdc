@@ -3,10 +3,10 @@ description:
 globs: 
 alwaysApply: true
 ---
-# MetRoll Project Development Guidelines
+# MeTroll Project Development Guidelines
 
 ## Project Overview
-MetRoll is a metro ticketing system built with Java Spring Boot Cloud microservices architecture.
+MeTroll is a metro ticketing system built with Java Spring Boot Cloud microservices architecture.
 
 ## Module Organization
 

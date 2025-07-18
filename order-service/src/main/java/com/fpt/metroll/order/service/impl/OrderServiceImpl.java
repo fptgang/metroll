@@ -184,6 +184,7 @@ public class OrderServiceImpl implements OrderService {
         } else if ("PAYOS".equals(checkoutRequest.getPaymentMethod())) {
             order = orderRepository.save(order);
             createPayOSPaymentLink(order);
+            sendOrderEmail(order, EmailType.ORDER_PAYMENT_CONFIRMATION);
         }
 
         log.info("Created order {} for customer {} with staff {} and final total {}",

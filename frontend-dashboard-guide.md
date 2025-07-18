@@ -1,8 +1,8 @@
-# MetRoll Dashboard Implementation Guide for Frontend Developers
+# MeTroll Dashboard Implementation Guide for Frontend Developers
 
 ## Overview
 
-This guide provides comprehensive documentation for implementing dashboard features in the MetRoll system. Each microservice now exposes dashboard endpoints that provide real-time statistics and metrics for administrative and operational purposes.
+This guide provides comprehensive documentation for implementing dashboard features in the MeTroll system. Each microservice now exposes dashboard endpoints that provide real-time statistics and metrics for administrative and operational purposes.
 
 ## API Endpoints Summary
 
@@ -503,7 +503,7 @@ export const Dashboard: React.FC = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold">MetRoll Dashboard</h1>
+        <h1 className="text-3xl font-bold">MeTroll Dashboard</h1>
         <button
           onClick={refetch}
           className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
@@ -908,4 +908,4 @@ export const config = {
 }
 ```
 
-This comprehensive guide provides everything needed to implement a fully functional dashboard system for the MetRoll application. The modular approach allows for incremental development and easy maintenance.
+This comprehensive guide provides everything needed to implement a fully functional dashboard system for the MeTroll application. The modular approach allows for incremental development and easy maintenance.
