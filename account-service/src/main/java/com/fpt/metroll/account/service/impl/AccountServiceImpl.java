@@ -144,6 +144,12 @@ public class AccountServiceImpl implements AccountService {
         if (!SecurityUtil.hasRole(AccountRole.ADMIN))
             throw new NoPermissionException();
 
+        // Check for email uniqueness
+        Preconditions.checkArgument(
+            !accountRepository.existsByEmail(request.getEmail()),
+            "Email already exists: " + request.getEmail()
+        );
+
         try {
             var userRecord = FirebaseAuth.getInstance().createUser(new UserRecord.CreateRequest()
                     .setEmail(request.getEmail())
@@ -167,6 +173,12 @@ public class AccountServiceImpl implements AccountService {
     public AccountDto create(String id, AccountCreateRequest request) {
         if (!SecurityUtil.hasRole(AccountRole.ADMIN))
             throw new NoPermissionException();
+
+        // Check for email uniqueness
+        Preconditions.checkArgument(
+            !accountRepository.existsByEmail(request.getEmail()),
+            "Email already exists: " + request.getEmail()
+        );
 
         Account account = accountMapper.toDocument(request);
         account.setId(id);
