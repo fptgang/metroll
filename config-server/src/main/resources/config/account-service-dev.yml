@@ -1,3 +1,8 @@
 logging:
   level:
     com.fpt.metroll.shared.security.AuthHeaderFilter: DEBUG
+
+gcp:
+  storage:
+    bucket-name: metroll-discount-documents-dev
+    project-id: ${GCP_PROJECT_ID:metroll-dev}

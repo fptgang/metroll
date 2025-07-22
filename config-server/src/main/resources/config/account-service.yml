@@ -70,3 +70,10 @@ eureka:
       defaultZone: http://service-registry.metroll:8761/eureka/
     register-with-eureka: true
     fetch-registry: true
+
+# GCP Configuration
+gcp:
+  storage:
+    bucket-name: ${GCP_STORAGE_BUCKET_NAME:metroll-discount-documents}
+    project-id: ${GCP_PROJECT_ID:}
+    signed-url-duration: PT3M # 3 minutes
