@@ -1,5 +1,7 @@
 package com.fpt.metroll.ticket.service.impl;
 
+import com.fpt.metroll.shared.domain.client.SubwayClient;
+import com.fpt.metroll.shared.domain.dto.subway.StationDto;
 import com.fpt.metroll.ticket.document.P2PJourney;
 import com.fpt.metroll.ticket.domain.dto.P2PJourneyCreateRequest;
 import com.fpt.metroll.ticket.domain.dto.P2PJourneyUpdateRequest;
@@ -32,13 +34,15 @@ public class P2PJourneyServiceImpl implements P2PJourneyService {
     private final MongoHelper mongoHelper;
     private final P2PJourneyMapper mapper;
     private final P2PJourneyRepository repository;
+    private final SubwayClient subwayClient;
 
     public P2PJourneyServiceImpl(MongoHelper mongoHelper,
-            P2PJourneyMapper mapper,
-            P2PJourneyRepository repository) {
+                                 P2PJourneyMapper mapper,
+                                 P2PJourneyRepository repository, SubwayClient subwayClient) {
         this.mongoHelper = mongoHelper;
         this.mapper = mapper;
         this.repository = repository;
+        this.subwayClient = subwayClient;
     }
 
     @Override
@@ -46,6 +50,11 @@ public class P2PJourneyServiceImpl implements P2PJourneyService {
     public PageDto<P2PJourneyDto> findAll(String search, PageableDto pageable) {
         // Anyone can view P2P journeys
         var res = mongoHelper.find(query -> {
+            // Filter only active records
+            if (!SecurityUtil.hasRole(AccountRole.ADMIN)) {
+                query.addCriteria(Criteria.where("isActive").is(true));
+            }
+
             if (search != null && !search.isBlank()) {
                 Criteria criteria = new Criteria().orOperator(
                         Criteria.where("startStationId").regex(search, "i"),
@@ -61,6 +70,10 @@ public class P2PJourneyServiceImpl implements P2PJourneyService {
     @Cacheable(key = "'findById:' + #id")
     public Optional<P2PJourneyDto> findById(String id) {
         Preconditions.checkNotNull(id, "ID cannot be null");
+        if (!SecurityUtil.hasRole(AccountRole.ADMIN)) {
+            // Only active journeys for non-admin users
+            return repository.findByIdAndIsActiveTrue(id).map(mapper::toDto);
+        }
         return repository.findById(id).map(mapper::toDto);
     }
 
@@ -73,25 +86,32 @@ public class P2PJourneyServiceImpl implements P2PJourneyService {
 
     @Override
     @Cacheable(key = "'findByStations:' + (#startStationId != null ? #startStationId : 'null') + ':' + (#endStationId != null ? #endStationId : 'null') + ':' + #pageable.page + ':' + #pageable.size + ':' + (#pageable.sort != null ? #pageable.sort : 'null')")
-    public PageDto<P2PJourneyDto> findByStations( PageableDto pageable, String startStationId, String endStationId) {
-       Criteria criteria = new Criteria();
-       if ((startStationId!=null && endStationId != null) && (!startStationId.isEmpty() && !endStationId.isEmpty())) {
-           criteria.andOperator(
-                   Criteria.where("startStationId").is(startStationId),
-                   Criteria.where("endStationId").is(endStationId));
-       } else if ( startStationId != null && !startStationId.isEmpty()) {
-           criteria.andOperator(Criteria.where("startStationId").is(startStationId));
-       } else if ( endStationId != null && !endStationId.isEmpty()) {
-           criteria.andOperator(Criteria.where("endStationId").is(endStationId));
-       } else {
-           return findAll(null, pageable);
-       }
+    public PageDto<P2PJourneyDto> findByStations(PageableDto pageable, String startStationId, String endStationId) {
+        Criteria criteria = new Criteria();
 
-       var res = mongoHelper.find(query -> {
-           query.addCriteria(criteria);
-           return query;
-       }, pageable, P2PJourney.class).map(mapper::toDto);
-       return PageMapper.INSTANCE.toPageDTO(res);
+        // Always filter by active records
+        if (!SecurityUtil.hasRole(AccountRole.ADMIN)) {
+            criteria.and("isActive").is(true);
+        }
+
+        if ((startStationId != null && endStationId != null)
+                && (!startStationId.isEmpty() && !endStationId.isEmpty())) {
+            criteria.andOperator(
+                    Criteria.where("startStationId").is(startStationId),
+                    Criteria.where("endStationId").is(endStationId));
+        } else if (startStationId != null && !startStationId.isEmpty()) {
+            criteria.andOperator(Criteria.where("startStationId").is(startStationId));
+        } else if (endStationId != null && !endStationId.isEmpty()) {
+            criteria.andOperator(Criteria.where("endStationId").is(endStationId));
+        } else {
+            return findAll(null, pageable);
+        }
+
+        var res = mongoHelper.find(query -> {
+            query.addCriteria(criteria);
+            return query;
+        }, pageable, P2PJourney.class).map(mapper::toDto);
+        return PageMapper.INSTANCE.toPageDTO(res);
     }
 
     @Override
@@ -119,6 +139,8 @@ public class P2PJourneyServiceImpl implements P2PJourneyService {
                 .isPresent()) {
             throw new IllegalArgumentException("P2P journey for these stations already exists");
         }
+
+        validateStations(request.getStartStationId(), request.getEndStationId());
 
         P2PJourney document = mapper.toDocument(request);
         document = repository.save(document);
@@ -157,7 +179,7 @@ public class P2PJourneyServiceImpl implements P2PJourneyService {
                         }
                     });
         }
-
+        validateStations(request.getStartStationId(), request.getEndStationId());
         document = mapper.updateFromRequest(document, request);
         document = repository.save(document);
         log.info("Updated P2P journey: {}", document.getId());
@@ -175,7 +197,64 @@ public class P2PJourneyServiceImpl implements P2PJourneyService {
         P2PJourney document = repository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("P2P journey not found"));
 
-        repository.delete(document);
-        log.info("Deleted P2P journey: {}", id);
+        // Soft delete: set isActive to false instead of hard delete
+        document.setIsActive(false);
+        repository.save(document);
+        log.info("Soft deleted P2P journey: {}", id);
+    }
+
+    @Override
+    @CacheEvict(allEntries = true)
+    public void deactivateP2PJourneyByStation(String stationId){
+        repository.findByStartStationIdOrEndStationId(stationId, stationId).forEach(document -> {
+            // Soft delete: set isActive to false instead of hard delete
+            document.setIsActive(false);
+            repository.save(document);
+            log.info("Soft deleted P2P journey: {}", document.getId());
+        });
+
+    }
+
+    @Override
+    @CacheEvict(allEntries = true)
+    public P2PJourneyDto activate(String id) {
+        if (!SecurityUtil.hasRole(AccountRole.ADMIN))
+            throw new NoPermissionException();
+
+        Preconditions.checkNotNull(id, "ID cannot be null");
+
+        P2PJourney document = repository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("P2P journey not found"));
+
+        if (document.getIsActive()) {
+            throw new IllegalArgumentException("P2P journey is already active");
+        }
+
+        // Check if there's already an active journey with the same station combination
+        if (repository.findByStartStationIdAndEndStationIdAndIsActiveTrue(
+                document.getStartStationId(), document.getEndStationId()).isPresent()) {
+            throw new IllegalArgumentException("An active P2P journey for these stations already exists");
+        }
+        validateStations(document.getStartStationId(), document.getEndStationId());
+        // Activate: set isActive to true
+        document.setIsActive(true);
+        document = repository.save(document);
+        log.info("Activated P2P journey: {}", id);
+        return mapper.toDto(document);
+    }
+
+    public void validateStations(String startStationId, String endStationId) {
+        StationDto startStation = subwayClient.getStationByCode(startStationId);
+        StationDto endStation =  subwayClient.getStationByCode(endStationId);
+
+        if (startStation == null || endStation == null) {
+            throw new IllegalArgumentException("Start or end station not found");
+        }else {
+            if (startStation.getId().equals(endStation.getId())) {
+                throw new IllegalArgumentException("Start and end stations must be different");
+            } else if (startStation.getStatus().equals("CLOSED") || endStation.getStatus().equals("CLOSED")) {
+                throw new IllegalArgumentException("Start and end stations must be open :\n"+ startStationId + " - " + startStation.getStatus() + ", \n " + endStationId + " - " + endStation.getStatus());
+            }
+        }
     }
 }

@@ -46,6 +46,13 @@ public class TimedTicketPlanServiceImpl implements TimedTicketPlanService {
     public PageDto<TimedTicketPlanDto> findAll(String search, PageableDto pageable) {
         // Anyone can view ticket plans
         var res = mongoHelper.find(query -> {
+            // Filter only active records
+
+            if (!SecurityUtil.hasRole(AccountRole.ADMIN)) {
+                // Non-admin users can only see active plans
+                query.addCriteria(Criteria.where("isActive").is(true));
+            }
+
             if (search != null && !search.isBlank()) {
                 Criteria criteria = new Criteria().orOperator(
                         Criteria.where("name").regex(search, "i"));
@@ -60,6 +67,10 @@ public class TimedTicketPlanServiceImpl implements TimedTicketPlanService {
     @Cacheable(key = "'findById:' + #id")
     public Optional<TimedTicketPlanDto> findById(String id) {
         Preconditions.checkNotNull(id, "ID cannot be null");
+        if (!SecurityUtil.hasRole(AccountRole.ADMIN)) {
+            // Non-admin users can only see active plans
+            return repository.findByIdAndIsActiveTrue(id).map(mapper::toDto);
+        }
         return repository.findById(id).map(mapper::toDto);
     }
 
@@ -129,7 +140,36 @@ public class TimedTicketPlanServiceImpl implements TimedTicketPlanService {
         TimedTicketPlan document = repository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Timed ticket plan not found"));
 
-        repository.delete(document);
-        log.info("Deleted timed ticket plan: {}", id);
+        // Soft delete: set isActive to false instead of hard delete
+        document.setIsActive(false);
+        repository.save(document);
+        log.info("Soft deleted timed ticket plan: {}", id);
+    }
+
+    @Override
+    @CacheEvict(allEntries = true)
+    public TimedTicketPlanDto activate(String id) {
+        if (!SecurityUtil.hasRole(AccountRole.ADMIN))
+            throw new NoPermissionException();
+
+        Preconditions.checkNotNull(id, "ID cannot be null");
+
+        TimedTicketPlan document = repository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Timed ticket plan not found"));
+
+        if (document.getIsActive()) {
+            throw new IllegalArgumentException("Timed ticket plan is already active");
+        }
+
+        // Check if there's already an active plan with the same name
+        if (repository.existsByNameAndIsActiveTrue(document.getName())) {
+            throw new IllegalArgumentException("An active timed ticket plan with this name already exists");
+        }
+
+        // Activate: set isActive to true
+        document.setIsActive(true);
+        document = repository.save(document);
+        log.info("Activated timed ticket plan: {}", id);
+        return mapper.toDto(document);
     }
 }

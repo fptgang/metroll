@@ -15,4 +15,5 @@ public class P2PJourneyUpdateRequest {
     private Double basePrice;
     private Double distance;
     private Integer travelTime;
+    private Boolean isActive;
 }

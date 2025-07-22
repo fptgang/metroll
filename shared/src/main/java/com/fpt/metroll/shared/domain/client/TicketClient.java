@@ -6,9 +6,7 @@ import com.fpt.metroll.shared.domain.dto.ticket.TicketUpsertRequest;
 import com.fpt.metroll.shared.domain.dto.ticket.TimedTicketPlanDto;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.cloud.openfeign.FallbackFactory;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -27,6 +25,9 @@ public interface TicketClient {
     
     @PostMapping("/tickets/batch")
     List<TicketDto> createTickets(List<TicketUpsertRequest> ticketRequests);
+
+    @DeleteMapping("/p2p-journeys/station/{stationId}")
+    void deactivateP2PJourneyByStation(@PathVariable("stationId") String stationId);
 
     /**
      * Fallback implementation used when ticket-service is unreachable (e.g. local dev)
@@ -68,6 +69,11 @@ public interface TicketClient {
         @Override
         public List<TicketDto> createTickets(List<TicketUpsertRequest> ticketRequests) {
             return ticketRequests.stream().map(this::createTicket).toList();
+        }
+
+        @Override
+        public void deactivateP2PJourneyByStation(String stationId) {
+            // do nothing
         }
     }
 

@@ -9,6 +9,7 @@ import java.util.TimeZone;
 
 @SpringBootApplication(scanBasePackages = {"com.fpt.metroll"})
 @EnableEurekaServer
+@EnableFeignClients(basePackages = {"com.fpt.metroll"})
 public class BackendApplication {
 
     public static void main(String[] args) {

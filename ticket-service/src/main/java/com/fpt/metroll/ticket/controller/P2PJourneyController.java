@@ -54,7 +54,7 @@ public class P2PJourneyController {
     public ResponseEntity<PageDto<P2PJourneyDto>> getP2PJourneyByStations(
             @ParameterObject @Valid PageableDto pageableDto,
             @Parameter @RequestParam(value = "startStationId", required = false) String startStationId,
-            @Parameter @RequestParam(value = "endStationId",required = false) String endStationId) {
+            @Parameter @RequestParam(value = "endStationId", required = false) String endStationId) {
         return ResponseEntity.ok(p2pJourneyService.findByStations(pageableDto, startStationId, endStationId));
     }
 
@@ -70,5 +70,18 @@ public class P2PJourneyController {
     public ResponseEntity<Void> deleteP2PJourney(@PathVariable("id") String id) {
         p2pJourneyService.delete(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Deactivate P2P journey by Station")
+    @DeleteMapping("/station/{stationId}")
+    public ResponseEntity<Void> deactivateP2PJourneyByStation(@PathVariable("stationId") String stationId) {
+        p2pJourneyService.deactivateP2PJourneyByStation(stationId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Activate P2P journey")
+    @PutMapping("/{id}/activate")
+    public ResponseEntity<P2PJourneyDto> activateP2PJourney(@PathVariable("id") String id) {
+        return ResponseEntity.ok(p2pJourneyService.activate(id));
     }
 }

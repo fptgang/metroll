@@ -28,6 +28,9 @@ public class P2PJourney {
     private Double distance; // Distance in kilometers
     private Integer travelTime; // Travel time in minutes
 
+    @Builder.Default
+    private Boolean isActive = true; // Soft delete flag
+
     @CreatedDate
     private Instant createdAt;
 

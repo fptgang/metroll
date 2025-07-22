@@ -63,4 +63,10 @@ public class TimedTicketPlanController {
         timedTicketPlanService.delete(id);
         return ResponseEntity.noContent().build();
     }
+
+    @Operation(summary = "Activate timed ticket plan")
+    @PutMapping("/{id}/activate")
+    public ResponseEntity<TimedTicketPlanDto> activateTimedTicketPlan(@PathVariable("id") String id) {
+        return ResponseEntity.ok(timedTicketPlanService.activate(id));
+    }
 }

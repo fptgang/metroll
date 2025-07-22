@@ -15,11 +15,15 @@ public interface P2PJourneyService {
 
     P2PJourneyDto requireById(String id);
 
-    PageDto<P2PJourneyDto> findByStations( PageableDto pageable,String startStationId, String endStationId);
+    PageDto<P2PJourneyDto> findByStations(PageableDto pageable, String startStationId, String endStationId);
 
     P2PJourneyDto create(P2PJourneyCreateRequest request);
 
     P2PJourneyDto update(String id, P2PJourneyUpdateRequest request);
 
     void delete(String id);
+
+    P2PJourneyDto activate(String id);
+
+    void deactivateP2PJourneyByStation(String stationId);
 }
