@@ -21,6 +21,7 @@ public class AccountDiscountPackageDto {
     private Instant activateDate;
     private Instant validUntil;
     private AccountDiscountStatus status;
+    private String documentUrl;
     private Instant createdAt;
     private Instant updatedAt;
 } 

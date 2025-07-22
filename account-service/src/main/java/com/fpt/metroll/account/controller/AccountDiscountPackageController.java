@@ -10,10 +10,14 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -39,10 +43,19 @@ public class AccountDiscountPackageController {
         return ResponseEntity.ok(accountDiscountPackageService.findAll(accountId, packageId, pageableDto));
     }
 
-    @Operation(summary = "Assign discount package to account")
-    @PostMapping("/assign")
+    @Operation(summary = "Assign discount package to account with document upload")
+    @PostMapping(value = "/assign", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<AccountDiscountPackageDto> assignDiscountPackage(
-            @RequestBody @Valid AccountDiscountAssignRequest request) {
+            @RequestParam @NotBlank(message = "Account ID is required") String accountId,
+            @RequestParam @NotBlank(message = "Discount package ID is required") String discountPackageId,
+            @RequestPart @NotNull(message = "Document file is required") MultipartFile document) {
+        
+        AccountDiscountAssignRequest request = AccountDiscountAssignRequest.builder()
+                .accountId(accountId)
+                .discountPackageId(discountPackageId)
+                .document(document)
+                .build();
+                
         return ResponseEntity.ok(accountDiscountPackageService.assign(request));
     }
 

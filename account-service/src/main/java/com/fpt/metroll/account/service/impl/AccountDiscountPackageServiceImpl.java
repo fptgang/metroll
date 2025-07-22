@@ -9,6 +9,7 @@ import com.fpt.metroll.account.repository.AccountDiscountPackageRepository;
 import com.fpt.metroll.account.repository.AccountRepository;
 import com.fpt.metroll.account.repository.DiscountPackageRepository;
 import com.fpt.metroll.account.service.AccountDiscountPackageService;
+import com.fpt.metroll.account.service.BlobStorageService;
 import com.fpt.metroll.shared.domain.dto.PageDto;
 import com.fpt.metroll.shared.domain.dto.PageableDto;
 import com.fpt.metroll.shared.domain.dto.discount.AccountDiscountPackageDto;
@@ -22,6 +23,7 @@ import com.fpt.metroll.shared.exception.NoPermissionException;
 import com.fpt.metroll.shared.service.EmailService;
 import com.fpt.metroll.shared.util.MongoHelper;
 import com.fpt.metroll.shared.util.SecurityUtil;
+import com.google.cloud.storage.BlobId;
 import com.google.common.base.Preconditions;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -43,18 +45,22 @@ public class AccountDiscountPackageServiceImpl implements AccountDiscountPackage
     private final AccountRepository accountRepository;
     private final DiscountPackageRepository discountPackageRepository;
     private final EmailService emailService;
+    private final BlobStorageService blobStorageService;
 
     public AccountDiscountPackageServiceImpl(MongoHelper mongoHelper,
                                              AccountDiscountPackageMapper accountDiscountPackageMapper,
                                              AccountDiscountPackageRepository accountDiscountPackageRepository,
                                              AccountRepository accountRepository,
-                                             DiscountPackageRepository discountPackageRepository, EmailService emailService) {
+                                             DiscountPackageRepository discountPackageRepository, 
+                                             EmailService emailService,
+                                             BlobStorageService blobStorageService) {
         this.mongoHelper = mongoHelper;
         this.accountDiscountPackageMapper = accountDiscountPackageMapper;
         this.accountDiscountPackageRepository = accountDiscountPackageRepository;
         this.accountRepository = accountRepository;
         this.discountPackageRepository = discountPackageRepository;
         this.emailService = emailService;
+        this.blobStorageService = blobStorageService;
     }
 
     @Override
@@ -122,6 +128,8 @@ public class AccountDiscountPackageServiceImpl implements AccountDiscountPackage
                 "Account ID cannot be blank");
         Preconditions.checkArgument(request.getDiscountPackageId() != null && !request.getDiscountPackageId().isBlank(),
                 "Discount package ID cannot be blank");
+        Preconditions.checkNotNull(request.getDocument(), "Document file cannot be null");
+        Preconditions.checkArgument(!request.getDocument().isEmpty(), "Document file cannot be empty");
 
         // Validate discount package is ACTIVE
         DiscountPackage discountPackage = discountPackageRepository.findById(request.getDiscountPackageId())
@@ -149,6 +157,10 @@ public class AccountDiscountPackageServiceImpl implements AccountDiscountPackage
             throw new IllegalStateException("Account already has an ongoing discount package");
         }
 
+        // Upload document file
+        String folderPath = "discount-packages/" + request.getDiscountPackageId() + "/accounts/" + request.getAccountId();
+        BlobId documentBlobId = blobStorageService.uploadFile(request.getDocument(), folderPath);
+
         // Create new AccountDiscountPackage
         Instant activateDate = now;
         Instant validUntil = activateDate.plus(discountPackage.getDuration(), ChronoUnit.DAYS);
@@ -156,6 +168,7 @@ public class AccountDiscountPackageServiceImpl implements AccountDiscountPackage
         AccountDiscountPackage accountDiscountPackage = AccountDiscountPackage.builder()
                 .accountId(request.getAccountId())
                 .discountPackageId(request.getDiscountPackageId())
+                .proofDocumentUri(documentBlobId.toGsUtilUriWithGeneration())
                 .activateDate(activateDate)
                 .validUntil(validUntil)
                 .status(AccountDiscountStatus.ACTIVATED)
@@ -200,6 +213,17 @@ public class AccountDiscountPackageServiceImpl implements AccountDiscountPackage
         if (accountDiscountPackage.getStatus() != AccountDiscountStatus.ACTIVATED ||
                 accountDiscountPackage.getValidUntil().isBefore(Instant.now())) {
             throw new IllegalStateException("Can only unassign ongoing discount packages");
+        }
+
+        // Delete associated document if exists
+        if (accountDiscountPackage.getProofDocumentUri() != null) {
+            try {
+                blobStorageService.deleteFile(BlobId.fromGsUtilUri(accountDiscountPackage.getProofDocumentUri()));
+            } catch (Exception e) {
+                log.warn("Failed to delete document file for account discount package: {}, error: {}", 
+                        id, e.getMessage());
+                // Continue with unassignment even if file deletion fails
+            }
         }
 
         accountDiscountPackage.setStatus(AccountDiscountStatus.CANCELLED);

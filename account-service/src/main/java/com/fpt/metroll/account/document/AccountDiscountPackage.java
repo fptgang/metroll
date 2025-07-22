@@ -1,6 +1,7 @@
 package com.fpt.metroll.account.document;
 
 import com.fpt.metroll.shared.domain.enums.AccountDiscountStatus;
+import com.google.cloud.storage.BlobId;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -24,6 +25,8 @@ public class AccountDiscountPackage {
     private String accountId;
 
     private String discountPackageId;
+
+    private String proofDocumentUri;
 
     private Instant activateDate;
 

@@ -146,3 +146,9 @@ public abstract class QuestionAskMapperDecorator implements QuestionAskMapper {
 
 15. Monetary Fields
 - Any fields storing money, credits, etc MUST use BigDecimal. You also need to tag @Field(targetType=DECIMAL128) on the corresponding field in MongoDB Document for precise serialization
+
+16. Blob upload
+- Use GCP storage
+- Service account fetch from HashiCorp Vault: See: com.fpt.metroll.account.config.GcpStorageConfig for reference
+Save Cloud Storage gs-util-uri to the database
+Generate download links with Signed URLs on DTO mapping, DO NOT expose the Blob ID to DTO

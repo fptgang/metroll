@@ -89,6 +89,8 @@ businessFeatures.each { p ->
         implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
         implementation 'org.springframework.boot:spring-boot-starter-cache'
 
+        implementation 'com.google.cloud:google-cloud-storage:2.53.3'
+
 //        testImplementation 'org.springframework.boot:spring-boot-starter-test'
 //        testImplementation 'org.springframework.boot:spring-boot-testcontainers'
 //        testImplementation 'org.springframework.security:spring-security-test'
