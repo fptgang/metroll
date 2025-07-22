@@ -127,8 +127,8 @@ public class TicketValidationServiceImpl implements TicketValidationService {
     }
 
     @Override
-    public PageDto<TicketValidationDto> findByStationId(String stationId, String search, ValidationType
-            validationType  , Instant startDate,
+    public PageDto<TicketValidationDto> findByStationId(String stationId, String search, ValidationType validationType,
+            Instant startDate,
             Instant endDate, PageableDto pageable) {
         if (!SecurityUtil.hasRole(AccountRole.ADMIN, AccountRole.STAFF))
             throw new NoPermissionException();
@@ -146,7 +146,6 @@ public class TicketValidationServiceImpl implements TicketValidationService {
                         Criteria.where("ticketId").regex(search, "i"));
                 query.addCriteria(criteria);
             }
-
 
             // Add validation type filtering
             if (validationType != null) {
@@ -178,8 +177,6 @@ public class TicketValidationServiceImpl implements TicketValidationService {
         Preconditions.checkNotNull(request, "Request cannot be null");
         Preconditions.checkArgument(request.getTicketId() != null && !request.getTicketId().isBlank(),
                 "Ticket ID cannot be null or blank");
-        Preconditions.checkArgument(request.getValidationType() != null,
-                "Validation type cannot be null");
 
         // Get the authenticated staff's assigned station
         String staffId = SecurityUtil.requireUserId();
@@ -199,18 +196,24 @@ public class TicketValidationServiceImpl implements TicketValidationService {
         validateTicketStatus(ticket);
         validateTicketExpiry(ticket);
 
+        // Get existing validations to determine validation type
+        List<TicketValidation> validations = repository.findByTicketIdOrderByValidationTimeDesc(ticket.getId());
+
+        // Determine validation type automatically
+        ValidationType validationType = determineValidationType(ticket, validations, stationId);
+
         // Validate based on ticket type
         if (ticket.getTicketType() == TicketType.P2P) {
-            validateP2PTicket(ticket, stationId, request.getValidationType());
+            validateP2PTicket(ticket, stationId, validationType, validations);
         } else if (ticket.getTicketType() == TicketType.TIMED) {
-            validateTimedTicket(ticket, stationId, request.getValidationType());
+            validateTimedTicket(ticket, stationId, validationType, validations);
         }
 
         // Create validation record
         TicketValidation validation = TicketValidation.builder()
                 .ticketId(request.getTicketId())
                 .stationId(stationId)
-                .validationType(request.getValidationType())
+                .validationType(validationType)
                 .validationTime(Instant.now())
                 .validatorId(staffId)
                 .build();
@@ -218,7 +221,7 @@ public class TicketValidationServiceImpl implements TicketValidationService {
         validation = repository.save(validation);
 
         // Update ticket status if needed
-        updateTicketStatusAfterValidation(ticket, request.getValidationType());
+        updateTicketStatusAfterValidation(ticket, validationType);
 
         // Update Firebase ticket status after validation
         firebaseTicketStatusService.updateTicketStatusAfterValidation(
@@ -227,9 +230,95 @@ public class TicketValidationServiceImpl implements TicketValidationService {
                 ticket.getStatus());
 
         log.info("Validated ticket: {} at station: {} with type: {}",
-                request.getTicketId(), stationId, request.getValidationType());
+                request.getTicketId(), stationId, validationType);
 
         return mapper.toDto(validation);
+    }
+
+    private ValidationType determineValidationType(Ticket ticket, List<TicketValidation> validations,
+            String stationId) {
+        if (ticket.getTicketType() == TicketType.P2P) {
+            return determineP2PValidationType(ticket, validations, stationId);
+        } else if (ticket.getTicketType() == TicketType.TIMED) {
+            return determineTimedValidationType(validations);
+        } else {
+            throw new IllegalArgumentException("Unsupported ticket type: " + ticket.getTicketType());
+        }
+    }
+
+    private ValidationType determineP2PValidationType(Ticket ticket, List<TicketValidation> validations,
+            String stationId) {
+        Preconditions.checkArgument(ticket.getTicketOrderDetailId() != null,
+                "Ticket must have an associated order detail for P2P validation");
+        OrderDetailDto orderDetail = orderClient.getOrderDetail(ticket.getTicketOrderDetailId());
+
+        Preconditions.checkArgument(orderDetail.getP2pJourney() != null,
+                "P2P ticket must have an associated journey");
+        P2PJourney p2pJourney = p2PJourneyRepository.findById(orderDetail.getP2pJourney()).orElseThrow(
+                () -> new IllegalArgumentException("P2P journey not found"));
+
+        if (validations.isEmpty()) {
+            // No previous validations, this should be ENTRY at start station
+            if (!Objects.equals(stationId, p2pJourney.getStartStationId())) {
+                throw new IllegalStateException(
+                        String.format("First validation must be at start station. Expected: %s, Got: %s",
+                                p2pJourney.getStartStationId(), stationId));
+            }
+            return ValidationType.ENTRY;
+        } else if (validations.size() == 1) {
+            // One previous validation (should be ENTRY), this should be EXIT at end station
+            TicketValidation previousValidation = validations.get(0);
+            if (previousValidation.getValidationType() != ValidationType.ENTRY) {
+                throw new IllegalStateException("Previous validation should be ENTRY for P2P ticket");
+            }
+            if (!Objects.equals(stationId, p2pJourney.getEndStationId())) {
+                throw new IllegalArgumentException(
+                        String.format("Exit validation must be at end station. Expected: %s, Got: %s",
+                                p2pJourney.getEndStationId(), stationId));
+            }
+            return ValidationType.EXIT;
+        } else {
+            // More than one validation, ticket is already used
+            throw new IllegalStateException("P2P ticket has already been fully used");
+        }
+    }
+
+    private ValidationType determineTimedValidationType(List<TicketValidation> validations) {
+        if (validations.isEmpty()) {
+            // No previous validations, first validation must be ENTRY
+            return ValidationType.ENTRY;
+        } else {
+            // Check the most recent validation to determine next type
+            TicketValidation mostRecentValidation = validations.get(0);
+            return mostRecentValidation.getValidationType() == ValidationType.ENTRY
+                    ? ValidationType.EXIT
+                    : ValidationType.ENTRY;
+        }
+    }
+
+    private void validateP2PTicket(Ticket ticket, String stationId, ValidationType validationType,
+            List<TicketValidation> validations) {
+        log.info("Validating P2P ticket: {} with determined type: {} at station: {}",
+                ticket.getId(), validationType, stationId);
+        // Additional validation logic is already handled in determineP2PValidationType
+    }
+
+    private void validateTimedTicket(Ticket ticket, String stationId, ValidationType validationType,
+            List<TicketValidation> validations) {
+        // For EXIT validation, ensure station is different from the most recent ENTRY
+        // station
+        if (validationType == ValidationType.EXIT && !validations.isEmpty()) {
+            TicketValidation mostRecentValidation = validations.get(0);
+            if (mostRecentValidation.getValidationType() == ValidationType.ENTRY) {
+                String entryStationId = mostRecentValidation.getStationId();
+                if (stationId.equals(entryStationId)) {
+                    throw new IllegalStateException(
+                            "EXIT station must be different from ENTRY station for timed ticket");
+                }
+            }
+        }
+
+        log.info("Validated timed ticket: {} with type: {} at station {}", ticket.getId(), validationType, stationId);
     }
 
     private void validateTicketStatus(Ticket ticket) {
@@ -242,88 +331,6 @@ public class TicketValidationServiceImpl implements TicketValidationService {
         if (ticket.getValidUntil() != null && ticket.getValidUntil().isBefore(Instant.now())) {
             throw new IllegalArgumentException("Ticket has expired");
         }
-    }
-
-    private void validateP2PTicket(Ticket ticket, String stationId, ValidationType validationType) {
-        Preconditions.checkArgument(ticket.getTicketOrderDetailId() != null,
-                "Ticket must have an associated order detail for P2P validation");
-        OrderDetailDto orderDetail = orderClient.getOrderDetail(ticket.getTicketOrderDetailId());
-
-        Preconditions.checkArgument(orderDetail.getP2pJourney() != null,
-                "P2P ticket must have an associated journey");
-        P2PJourney p2pJourney = p2PJourneyRepository.findById(orderDetail.getP2pJourney()).orElseThrow(
-                () -> new IllegalArgumentException("P2P journey not found"));
-
-        log.info("Validating P2P {} -> {} at station: {}",
-                p2pJourney.getStartStationId(),
-                p2pJourney.getEndStationId(), stationId);
-
-        List<TicketValidation> validations = repository.findByTicketIdOrderByValidationTimeDesc(ticket.getId());
-
-        if (validationType == ValidationType.ENTRY) {
-            if (!Objects.equals(stationId, p2pJourney.getStartStationId())) {
-                throw new IllegalStateException(
-                        String.format("Entry validation must be at start station. Expected: %s, Got: %s",
-                                p2pJourney.getStartStationId(), stationId));
-            }
-
-            // must have no validation before
-            if (!validations.isEmpty()) {
-                throw new IllegalStateException("The ticket can no longer be validated for ENTRY");
-            }
-        } else if (validationType == ValidationType.EXIT) {
-            if (!Objects.equals(stationId, p2pJourney.getEndStationId())) {
-                throw new IllegalArgumentException(
-                        String.format("Exit validation must be at end station. Expected: %s, Got: %s",
-                                p2pJourney.getEndStationId(), stationId));
-            }
-
-            // if no validation before, the ticket must be validated for ENTRY first
-            if (validations.isEmpty()) {
-                throw new IllegalStateException("The ticket must be validated for ENTRY first");
-            }
-            // if have validation before, this ticket is no longer usable
-            if (validations.size() > 1) {
-                throw new IllegalStateException("The ticket can no longer be validated for EXIT");
-            }
-        }
-
-    }
-
-    private void validateTimedTicket(Ticket ticket, String stationId, ValidationType validationType) {
-        List<TicketValidation> validations = repository.findByTicketIdOrderByValidationTimeDesc(ticket.getId());
-
-        if (validations.isEmpty()) {
-            // First validation must be ENTRY
-            if (validationType != ValidationType.ENTRY) {
-                throw new IllegalStateException("First validation for timed ticket must be ENTRY");
-            }
-        } else {
-            // Check alternating pattern: ENTRY -> EXIT -> ENTRY -> EXIT...
-            TicketValidation mostRecentValidation = validations.get(0);
-            ValidationType expectedValidationType = mostRecentValidation.getValidationType() == ValidationType.ENTRY
-                    ? ValidationType.EXIT
-                    : ValidationType.ENTRY;
-
-            if (validationType != expectedValidationType) {
-                throw new IllegalStateException(
-                        String.format(
-                                "Expected validation type: %s, but got: %s. Timed tickets must follow ENTRY-EXIT pattern.",
-                                expectedValidationType, validationType));
-            }
-
-            // If expected is EXIT, ensure stationId is different from ENTRY's stationId
-            if (validationType == ValidationType.EXIT) {
-                // The most recent validation is ENTRY
-                String entryStationId = mostRecentValidation.getStationId();
-                if (stationId.equals(entryStationId)) {
-                    throw new IllegalStateException(
-                            "EXIT station must be different from ENTRY station for timed ticket");
-                }
-            }
-        }
-
-        log.info("Validated timed ticket: {} with type: {} at station {}", ticket.getId(), validationType, stationId);
     }
 
     private void updateTicketStatusAfterValidation(Ticket ticket, ValidationType validationType) {
