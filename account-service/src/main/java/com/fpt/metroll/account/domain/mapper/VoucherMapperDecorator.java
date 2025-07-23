@@ -20,16 +20,26 @@ public abstract class VoucherMapperDecorator implements VoucherMapper {
     @Override
     public VoucherDto toDto(Voucher voucher) {
         VoucherDto dto = delegate.toDto(voucher);
-        
-        // Populate the owner field using AccountService.requireBasicById
-        if (voucher != null && voucher.getOwnerId() != null) {
+
+        if (voucher != null && voucher.getUserId() != null) {
             try {
                 SecurityUtil.elevate(AccountRole.ADMIN, () -> {
-                    dto.setOwner(accountService.requireBasicById(voucher.getOwnerId()));
+                    dto.setUser(accountService.requireBasicById(voucher.getUserId()));
                 });
             } catch (Exception e) {
                 // Log error but don't fail the mapping
-                dto.setOwner(null);
+                dto.setUser(null);
+            }
+        }
+
+        if (voucher != null && voucher.getIssuerId() != null) {
+            try {
+                SecurityUtil.elevate(AccountRole.ADMIN, () -> {
+                    dto.setIssuer(accountService.requireBasicById(voucher.getIssuerId()));
+                });
+            } catch (Exception e) {
+                // Log error but don't fail the mapping
+                dto.setIssuer(null);
             }
         }
         

@@ -15,9 +15,6 @@ public interface VoucherClient {
     @GetMapping("/vouchers/{voucherId}")
     VoucherDto getVoucher(@PathVariable("voucherId") String voucherId);
 
-    @GetMapping("/vouchers/my-vouchers")
-    List<VoucherDto> getMyVouchers();
-
     @PutMapping("/vouchers/{voucherId}/use")
     void use(@PathVariable("voucherId") String voucherId);
 }
