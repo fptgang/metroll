@@ -16,6 +16,7 @@ public class TimedTicketPlanDto {
     private String name;
     private Integer validDuration;
     private Double basePrice;
+    private Boolean isActive;
     private Instant createdAt;
     private Instant updatedAt;
 }

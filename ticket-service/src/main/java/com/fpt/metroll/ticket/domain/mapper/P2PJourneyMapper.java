@@ -16,6 +16,7 @@ public interface P2PJourneyMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "isActive", ignore = true)
     P2PJourney toDocument(P2PJourneyCreateRequest request);
 
     default P2PJourney updateFromRequest(P2PJourney document, P2PJourneyUpdateRequest request) {
@@ -33,6 +34,9 @@ public interface P2PJourneyMapper {
         }
         if (request.getTravelTime() != null) {
             document.setTravelTime(request.getTravelTime());
+        }
+        if(request.getIsActive() != null) {
+            document.setIsActive(request.getIsActive());
         }
         return document;
     }

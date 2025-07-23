@@ -10,6 +10,11 @@ import java.util.Optional;
 @Repository
 public interface P2PJourneyRepository extends MongoRepository<P2PJourney, String> {
     Optional<P2PJourney> findByStartStationIdAndEndStationId(String startStationId, String endStationId);
-
     List<P2PJourney> findByStartStationIdOrEndStationId(String startStationId, String endStationId);
+    
+    // Soft delete support methods
+    List<P2PJourney> findByIsActiveTrue();
+    Optional<P2PJourney> findByIdAndIsActiveTrue(String id);
+    Optional<P2PJourney> findByStartStationIdAndEndStationIdAndIsActiveTrue(String startStationId, String endStationId);
+    List<P2PJourney> findByStartStationIdOrEndStationIdAndIsActiveTrue(String startStationId, String endStationId);
 }

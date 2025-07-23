@@ -1,5 +1,7 @@
 package com.fpt.metroll.ticket.service.impl;
 
+import com.fpt.metroll.shared.domain.client.SubwayClient;
+import com.fpt.metroll.shared.domain.dto.subway.StationDto;
 import com.fpt.metroll.ticket.document.P2PJourney;
 import com.fpt.metroll.ticket.document.Ticket;
 import com.fpt.metroll.ticket.document.TicketValidation;
@@ -50,15 +52,16 @@ public class TicketValidationServiceImpl implements TicketValidationService {
     private final OrderClient orderClient;
     private final P2PJourneyRepository p2PJourneyRepository;
     private final FirebaseTicketStatusService firebaseTicketStatusService;
+    private final SubwayClient subwayClient;
 
     public TicketValidationServiceImpl(MongoHelper mongoHelper,
-            TicketValidationMapper mapper,
-            TicketValidationRepository repository,
-            TicketRepository ticketRepository,
-            AccountClient accountClient,
-            OrderClient orderClient,
-            P2PJourneyRepository p2PJourneyRepository,
-            FirebaseTicketStatusService firebaseTicketStatusService) {
+                                       TicketValidationMapper mapper,
+                                       TicketValidationRepository repository,
+                                       TicketRepository ticketRepository,
+                                       AccountClient accountClient,
+                                       OrderClient orderClient,
+                                       P2PJourneyRepository p2PJourneyRepository,
+                                       FirebaseTicketStatusService firebaseTicketStatusService, SubwayClient subwayClient) {
         this.mongoHelper = mongoHelper;
         this.mapper = mapper;
         this.repository = repository;
@@ -67,6 +70,7 @@ public class TicketValidationServiceImpl implements TicketValidationService {
         this.orderClient = orderClient;
         this.p2PJourneyRepository = p2PJourneyRepository;
         this.firebaseTicketStatusService = firebaseTicketStatusService;
+        this.subwayClient = subwayClient;
     }
 
     @Override
@@ -188,6 +192,8 @@ public class TicketValidationServiceImpl implements TicketValidationService {
 
         String stationId = staffAccount.getAssignedStation();
 
+        validateStationId(stationId);
+
         // Get ticket information
         Ticket ticket = ticketRepository.findById(request.getTicketId())
                 .orElseThrow(() -> new IllegalArgumentException("Ticket not found"));
@@ -233,6 +239,16 @@ public class TicketValidationServiceImpl implements TicketValidationService {
                 request.getTicketId(), stationId, validationType);
 
         return mapper.toDto(validation);
+    }
+
+    private void validateStationId(String stationId) {
+        StationDto station = subwayClient.getStationByCode(stationId);
+        if (station == null) {
+            throw new IllegalArgumentException("Invalid station ID: " + stationId);
+        }
+        if (station.getStatus().equals("CLOSED")) {
+            throw new IllegalArgumentException("Assigned station is closed: " + stationId);
+        }
     }
 
     private ValidationType determineValidationType(Ticket ticket, List<TicketValidation> validations,

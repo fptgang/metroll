@@ -1,5 +1,6 @@
 package com.fpt.metroll.subway.service.impl;
 
+import com.fpt.metroll.shared.domain.client.TicketClient;
 import com.fpt.metroll.shared.domain.dto.PageDto;
 import com.fpt.metroll.shared.domain.dto.PageableDto;
 import com.fpt.metroll.shared.domain.dto.subway.StationDto;
@@ -20,6 +21,7 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class StationServiceImpl implements StationService {
 
+    private final TicketClient ticketClient;
     private StationRepository stationRepository;
     private StationMapper stationMapper;
     private MongoHelper mongoHelper;
@@ -28,11 +30,12 @@ public class StationServiceImpl implements StationService {
     public StationServiceImpl(
             StationRepository stationRepository,
             StationMapper stationMapper,
-            MongoHelper mongoHelper
-    ) {
+            MongoHelper mongoHelper,
+            TicketClient ticketClient) {
         this.stationRepository = stationRepository;
         this.stationMapper = stationMapper;
         this.mongoHelper = mongoHelper;
+        this.ticketClient = ticketClient;
     }
 
     @Override
@@ -56,7 +59,14 @@ public class StationServiceImpl implements StationService {
     @Override
     public StationDto save(StationDto stationDto) {
         Station station = stationMapper.toEntity(stationDto);
+        //indicate update station
+        if(station.getId()!=null) {
+            if(stationDto.getStatus().equals("CLOSED")){
+            ticketClient.deactivateP2PJourneyByStation(station.getCode());
+            }
+        }
         station = stationRepository.save(station);
+
         log.info("[StationService] Saved station code: {}, station {}", station.getCode(), station);
         return stationMapper.toDto(station);
 

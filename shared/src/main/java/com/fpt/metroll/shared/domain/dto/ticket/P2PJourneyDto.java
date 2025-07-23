@@ -18,6 +18,7 @@ public class P2PJourneyDto {
     private Double basePrice;
     private Double distance;
     private Integer travelTime;
+    private Boolean isActive;
     private Instant createdAt;
     private Instant updatedAt;
 }

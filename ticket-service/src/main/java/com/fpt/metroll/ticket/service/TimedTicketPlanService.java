@@ -20,4 +20,6 @@ public interface TimedTicketPlanService {
     TimedTicketPlanDto update(String id, TimedTicketPlanUpdateRequest request);
 
     void delete(String id);
+
+    TimedTicketPlanDto activate(String id);
 }
