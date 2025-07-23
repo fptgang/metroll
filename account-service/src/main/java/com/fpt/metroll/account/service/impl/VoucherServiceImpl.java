@@ -20,9 +20,8 @@ import com.fpt.metroll.shared.exception.NoPermissionException;
 import com.fpt.metroll.shared.service.EmailService;
 import com.fpt.metroll.shared.util.MongoHelper;
 import com.fpt.metroll.shared.util.SecurityUtil;
+import com.google.common.base.Preconditions;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.RandomStringUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.stereotype.Service;
 
@@ -30,9 +29,7 @@ import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
@@ -242,22 +239,57 @@ public class VoucherServiceImpl implements VoucherService {
     }
 
     @Override
-    public void use(String code) {
-        if (!SecurityUtil.hasRole(AccountRole.CUSTOMER))
+    public void use(String id) {
+        if (!SecurityUtil.hasRole(AccountRole.ADMIN)) // internal use
             throw new NoPermissionException();
-        code = code.toUpperCase();
 
-        Voucher voucher = voucherRepository.findByCode(code)
+        Voucher voucher = voucherRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Voucher not found"));
 
-        if (voucher.getStatus() != VoucherStatus.VALID)
-            throw new IllegalStateException("Can only use VALID vouchers");
+        if (voucher.getStatus() != VoucherStatus.PRESERVED)
+            throw new IllegalStateException("Can only use PRESERVED vouchers");
+
+        Preconditions.checkNotNull(voucher.getUserId(), "No user id");
+        Preconditions.checkState(voucher.getUserId().equals(SecurityUtil.requireUserId()),
+                "Illegal use of preserved user");
 
         voucher.setStatus(VoucherStatus.USED);
+        voucherRepository.save(voucher);
+    }
+
+    @Override
+    public void preserve(String id, String userId) {
+        if (!SecurityUtil.hasRole(AccountRole.ADMIN)) // internal use
+            throw new NoPermissionException();
+
+        Voucher voucher = voucherRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Voucher not found"));
+
+        Preconditions.checkState(voucher.getStatus() == VoucherStatus.VALID,
+                "Can only preserve VALID vouchers");
+        Preconditions.checkState(voucher.getUserId() == null,
+                "Voucher user already exists");
+
+        voucher.setStatus(VoucherStatus.PRESERVED);
         voucher.setUserId(SecurityUtil.requireUserId());
         voucherRepository.save(voucher);
     }
 
+    @Override
+    public void unpreserve(String id) {
+        if (!SecurityUtil.hasRole(AccountRole.ADMIN)) // internal use
+            throw new NoPermissionException();
+
+        Voucher voucher = voucherRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Voucher not found"));
+
+        Preconditions.checkState(voucher.getStatus() == VoucherStatus.PRESERVED,
+                "Can only un-preserve PRESERVED vouchers");
+
+        voucher.setStatus(VoucherStatus.VALID);
+        voucher.setUserId(null);
+        voucherRepository.save(voucher);
+    }
 
     private static final String CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 

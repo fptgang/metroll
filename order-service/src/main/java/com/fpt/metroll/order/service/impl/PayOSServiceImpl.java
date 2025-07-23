@@ -28,6 +28,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import com.fpt.metroll.shared.util.SecurityUtil;
+import com.fpt.metroll.shared.domain.enums.AccountRole;
+import com.fpt.metroll.shared.domain.client.VoucherClient;
 
 @Service
 @Slf4j
@@ -38,18 +41,21 @@ public class PayOSServiceImpl implements PayOSService {
     private final OrderRepository orderRepository;
     private final ObjectMapper objectMapper;
     private final TicketClient ticketClient;
+    private final VoucherClient voucherClient;
 
     public PayOSServiceImpl(PayOSConfig payOSConfig,
                            OrderRepository orderRepository,
                            ObjectMapper objectMapper,
                            @Autowired(required = false) PayOS payOS,
-                            TicketClient ticketClient
+                            TicketClient ticketClient,
+                            VoucherClient voucherClient
                             ) {
         this.payOS = payOS;
         this.payOSConfig = payOSConfig;
         this.orderRepository = orderRepository;
         this.objectMapper = objectMapper;
         this.ticketClient = ticketClient;
+        this.voucherClient = voucherClient;
     }
     
     @Override
@@ -171,14 +177,44 @@ public class PayOSServiceImpl implements PayOSService {
             if ("00".equals(webhookData.getCode())) {
                 // Payment successful
                 order.setStatus(OrderStatus.COMPLETED);
-                // Create tickets for the order
                 orderRepository.save(order);
                 createTicketsForOrder(order);
+                
+                // Mark voucher as used if voucher was applied
+                if (order.getVoucher() != null && !order.getVoucher().isEmpty()) {
+                    try {
+                        SecurityUtil.elevate(AccountRole.ADMIN, () -> {
+                            voucherClient.use(order.getVoucher());
+                        });
+                        log.info("Voucher {} marked as used for completed order {}", order.getVoucher(), order.getId());
+                    } catch (Exception e) {
+                        log.error("Failed to mark voucher {} as used for order {}: {}", 
+                            order.getVoucher(), order.getId(), e.getMessage());
+                        // Note: Order is still completed, but voucher state may be inconsistent
+                        // This should be handled by a cleanup job
+                    }
+                }
+                
                 log.info("Payment completed for order {} with amount {}", 
                         order.getId(), webhookData.getAmount());
             } else {
                 // Payment failed
                 order.setStatus(OrderStatus.FAILED);
+                
+                // Unpreserve voucher if voucher was applied
+                if (order.getVoucher() != null && !order.getVoucher().isEmpty()) {
+                    try {
+                        SecurityUtil.elevate(AccountRole.ADMIN, () -> {
+                            voucherClient.unpreserve(order.getVoucher());
+                        });
+                        log.info("Voucher {} unpreserved for failed order {}", order.getVoucher(), order.getId());
+                    } catch (Exception e) {
+                        log.error("Failed to unpreserve voucher {} for failed order {}: {}", 
+                            order.getVoucher(), order.getId(), e.getMessage());
+                        // Voucher may remain in PRESERVED state - needs cleanup job
+                    }
+                }
+                
                 log.warn("Payment failed for order {} with code {} and description {}", 
                         order.getId(), webhookData.getCode(), webhookData.getDesc());
             }

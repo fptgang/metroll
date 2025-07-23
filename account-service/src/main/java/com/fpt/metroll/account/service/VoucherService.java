@@ -24,5 +24,9 @@ public interface VoucherService {
 
     void revoke(String id);
 
-    void use(String code);
+    void use(String id);
+
+    void preserve(String id, String userId);
+
+    void unpreserve(String id);
 }

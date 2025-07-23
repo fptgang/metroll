@@ -180,19 +180,28 @@ public class OrderServiceImpl implements OrderService {
             order.setStatus(OrderStatus.COMPLETED);
             order = orderRepository.save(order);
             createTicketsForOrder(order);
-        } else if ("PAYOS".equals(checkoutRequest.getPaymentMethod())) {
-            order.setTransactionReference(generateTransactionReference());
-            order = orderRepository.save(order);
-            createPayOSPaymentLink(order);
-            sendOrderEmail(order, EmailType.ORDER_PAYMENT_CONFIRMATION);
+        } else {
+            if (checkoutRequest.getVoucherId() != null &&
+                    !checkoutRequest.getVoucherId().isEmpty()
+                    && customerId != null) {
+                final String voucherId = checkoutRequest.getVoucherId();
+
+                SecurityUtil.elevate(AccountRole.ADMIN, () -> {
+                    voucherClient.preserve(voucherId, customerId);
+                });
+            }
+
+            if ("PAYOS".equals(checkoutRequest.getPaymentMethod())) {
+                order.setTransactionReference(generateTransactionReference());
+                order = orderRepository.save(order);
+                createPayOSPaymentLink(order);
+                sendOrderEmail(order, EmailType.ORDER_PAYMENT_CONFIRMATION);
+            }
         }
 
         log.info("Created order {} for customer {} with staff {} and final total {}",
                 order.getId(), customerId, staffId, finalTotal);
-        //Mark voucher as used
-        if (checkoutRequest.getVoucherId() != null && !checkoutRequest.getVoucherId().isEmpty()) {
-            voucherClient.use(checkoutRequest.getVoucherId());
-        }
+
         return convertToDto(order);
     }
 
@@ -347,23 +356,53 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
-    @Transactional
-    public void processPaymentCompletion(Order order) {
-        try {
-            // Update order status to COMPLETED
-            order.setStatus(OrderStatus.COMPLETED);
-            orderRepository.save(order);
-
-            // Create tickets for the order
-            createTicketsForOrder(order);
-
-            log.info("Payment completed and tickets created for order {}", order.getId());
-        } catch (Exception e) {
-            log.error("Failed to process payment completion for order {}", order.getId(), e);
-            order.setStatus(OrderStatus.FAILED);
-            orderRepository.save(order);
-        }
-    }
+//    @Transactional
+//    public void processPaymentCompletion(Order order) {
+//        try {
+//            // Update order status to COMPLETED
+//            order.setStatus(OrderStatus.COMPLETED);
+//            orderRepository.save(order);
+//
+//            // Create tickets for the order
+//            createTicketsForOrder(order);
+//
+//            // Mark voucher as used if voucher was applied
+//            if (order.getVoucher() != null && !order.getVoucher().isEmpty()) {
+//                try {
+//                    SecurityUtil.elevate(AccountRole.ADMIN, () -> {
+//                        voucherClient.use(order.getVoucher());
+//                    });
+//                    log.info("Voucher {} marked as used for completed order {}", order.getVoucher(), order.getId());
+//                } catch (Exception e) {
+//                    log.error("Failed to mark voucher {} as used for order {}: {}",
+//                        order.getVoucher(), order.getId(), e.getMessage());
+//                    // Note: Order is still completed, but voucher state may be inconsistent
+//                    // This should be handled by a cleanup job
+//                }
+//            }
+//
+//            log.info("Payment completed and tickets created for order {}", order.getId());
+//        } catch (Exception e) {
+//            log.error("Failed to process payment completion for order {}", order.getId(), e);
+//            order.setStatus(OrderStatus.FAILED);
+//
+//            // Unpreserve voucher if voucher was applied and order failed
+//            if (order.getVoucher() != null && !order.getVoucher().isEmpty()) {
+//                try {
+//                    SecurityUtil.elevate(AccountRole.ADMIN, () -> {
+//                        voucherClient.unpreserve(order.getVoucher());
+//                    });
+//                    log.info("Voucher {} unpreserved for failed order {}", order.getVoucher(), order.getId());
+//                } catch (Exception voucherException) {
+//                    log.error("Failed to unpreserve voucher {} for failed order {}: {}",
+//                        order.getVoucher(), order.getId(), voucherException.getMessage());
+//                    // Voucher may remain in PRESERVED state - needs cleanup job
+//                }
+//            }
+//
+//            orderRepository.save(order);
+//        }
+//    }
 
     private void createTicketsForOrder(Order order) {
         List<TicketUpsertRequest> ticketRequests = new ArrayList<>();

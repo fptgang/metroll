@@ -72,9 +72,24 @@ public class VoucherController {
     }
 
     @Operation(summary = "Use voucher")
-    @PutMapping("/{code}/use")
-    public ResponseEntity<Void> useVoucher(@PathVariable("code") String code) {
-        voucherService.use(code);
+    @PutMapping("/{id}/use")
+    public ResponseEntity<Void> useVoucher(@PathVariable("id") String id) {
+        voucherService.use(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Preserve voucher")
+    @PutMapping("/{id}/preserve")
+    public ResponseEntity<Void> preserveVoucher(@PathVariable("id") String id,
+                                                @RequestParam(name = "userId", required = false) String userId) {
+        voucherService.preserve(id, userId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Unpreserve voucher")
+    @PutMapping("/{id}/unpreserve")
+    public ResponseEntity<Void> unpreserveVoucher(@PathVariable("id") String id) {
+        voucherService.unpreserve(id);
         return ResponseEntity.noContent().build();
     }
 }
