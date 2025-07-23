@@ -16,13 +16,13 @@ public interface VoucherService {
 
     VoucherDto requireById(String id);
 
+    VoucherDto requireByCode(String code);
+
     List<VoucherDto> create(VoucherCreateRequest request);
 
     VoucherDto update(String id, VoucherUpdateRequest request);
 
     void revoke(String id);
 
-    void use(String id);
-
-    List<VoucherDto> findMyVouchers();
+    void use(String code);
 }

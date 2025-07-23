@@ -26,7 +26,8 @@ public class Voucher {
     @Id
     private String id;
 
-    private String ownerId;
+    private String userId;
+    private String issuerId;
 
     @Indexed(unique = true)
     private String code;

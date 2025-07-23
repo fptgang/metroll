@@ -51,6 +51,12 @@ public class VoucherController {
         return ResponseEntity.ok(voucherService.requireById(id));
     }
 
+    @Operation(summary = "Get voucher by code")
+    @GetMapping("/code/{code}")
+    public ResponseEntity<VoucherDto> getVoucherByCode(@PathVariable("code") String code) {
+        return ResponseEntity.ok(voucherService.requireByCode(code));
+    }
+
     @Operation(summary = "Update voucher")
     @PutMapping("/{id}")
     public ResponseEntity<VoucherDto> updateVoucher(@PathVariable("id") String id,
@@ -66,15 +72,9 @@ public class VoucherController {
     }
 
     @Operation(summary = "Use voucher")
-    @PutMapping("/{id}/use")
-    public ResponseEntity<Void> useVoucher(@PathVariable("id") String id) {
-        voucherService.use(id);
+    @PutMapping("/{code}/use")
+    public ResponseEntity<Void> useVoucher(@PathVariable("code") String code) {
+        voucherService.use(code);
         return ResponseEntity.noContent().build();
-    }
-
-    @Operation(summary = "Get my vouchers")
-    @GetMapping("/my-vouchers")
-    public ResponseEntity<List<VoucherDto>> getMyVouchers() {
-        return ResponseEntity.ok(voucherService.findMyVouchers());
     }
 }

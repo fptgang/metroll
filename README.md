@@ -45,6 +45,12 @@ CLOUDAMQP_VHOST=
 HCP_CLIENT_ID=
 HCP_CLIENT_SECRET=
 HCP_SECRET_URL_FIREBASE=https://api.cloud.hashicorp.com/secrets/2023-11-28/organizations/xxx/projects/xxx/apps/xxx/secrets/firebase_service_account:open
+HCP_SECRET_URL_GCP=https://api.cloud.hashicorp.com/secrets/2023-11-28/organizations/xxx/projects/xxx/apps/xxx/secrets/gcp_service_account:open
+GCP_STORAGE_BUCKET_NAME=
+GCP_PROJECT_ID=
+RESEND_API_KEY=
+EMAIL_FROM=
+EMAIL_FROM_NAME=
 ```
 
 Toàn bộ service sẽ chạy ở profile `dev` (ngoại trừ Config-Server)

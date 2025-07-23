@@ -15,8 +15,10 @@ import java.time.Instant;
 @AllArgsConstructor
 public class VoucherDto {
     private String id;
-    private String ownerId;
-    private AccountBasicDto owner;
+    private String userId;
+    private AccountBasicDto user;
+    private String issuerId;
+    private AccountBasicDto issuer;
     private String code;
     private Double discountAmount;
     private Double minTransactionAmount;

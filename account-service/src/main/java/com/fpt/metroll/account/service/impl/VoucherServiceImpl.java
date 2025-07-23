@@ -21,6 +21,8 @@ import com.fpt.metroll.shared.service.EmailService;
 import com.fpt.metroll.shared.util.MongoHelper;
 import com.fpt.metroll.shared.util.SecurityUtil;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.stereotype.Service;
 
@@ -31,6 +33,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -90,7 +93,7 @@ public class VoucherServiceImpl implements VoucherService {
 
         var res = mongoHelper.find(query -> {
             if (finalUserId != null && !finalUserId.isBlank()) {
-                query.addCriteria(Criteria.where("ownerId").is(finalUserId));
+                query.addCriteria(Criteria.where("userId").is(finalUserId));
             }
 
             return query;
@@ -102,7 +105,8 @@ public class VoucherServiceImpl implements VoucherService {
     public Optional<VoucherDto> findById(String id) {
         return voucherRepository.findById(id).map(e -> {
             if (SecurityUtil.hasRole(AccountRole.CUSTOMER) &&
-                    !Objects.equals(e.getOwnerId(), SecurityUtil.requireUserId())) {
+                    e.getUserId() != null &&
+                    !e.getUserId().equals(SecurityUtil.requireUserId())) {
                 throw new NoPermissionException();
             }
             return e;
@@ -114,7 +118,24 @@ public class VoucherServiceImpl implements VoucherService {
         return voucherRepository.findById(id)
                 .map(e -> {
                     if (SecurityUtil.hasRole(AccountRole.CUSTOMER) &&
-                            !Objects.equals(e.getOwnerId(), SecurityUtil.requireUserId())) {
+                            e.getUserId() != null &&
+                            !e.getUserId().equals(SecurityUtil.requireUserId())) {
+                        throw new NoPermissionException();
+                    }
+                    return e;
+                })
+                .map(voucherMapper::toDto)
+                .orElseThrow(() -> new IllegalArgumentException("Voucher not found"));
+    }
+
+    @Override
+    public VoucherDto requireByCode(String code) {
+        code = code.toUpperCase();
+        return voucherRepository.findByCode(code)
+                .map(e -> {
+                    if (SecurityUtil.hasRole(AccountRole.CUSTOMER) &&
+                            e.getUserId() != null &&
+                            !e.getUserId().equals(SecurityUtil.requireUserId())) {
                         throw new NoPermissionException();
                     }
                     return e;
@@ -131,14 +152,19 @@ public class VoucherServiceImpl implements VoucherService {
         validateVoucherAmounts(request.getDiscountAmount(), request.getMinTransactionAmount());
         validateValidityDates(request.getValidFrom(), request.getValidUntil());
 
-        List<Voucher> vouchers = request.getOwnerIds().stream()
-                .map(ownerId -> {
+        String issuerId = SecurityUtil.requireUserId();
+
+        List<Voucher> vouchers = request.getRecipients().stream()
+                .map(recipientId -> {
                     String code;
+
                     do {
-                        code = UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+                        code = generateRandomCode(6);
                     } while (voucherRepository.existsByCode(code));
-                    Account account = accountRepository.findById(ownerId)
+
+                    Account account = accountRepository.findById(recipientId)
                             .orElseThrow(() -> new IllegalArgumentException("Account not found"));
+
                     emailService.sendVoucherEmail(account.getEmail(), account.getFullName(),
                             EmailType.VOUCHER_CLAIMED, VoucherEmailContext.builder()
                                     .voucherCode(code)
@@ -146,15 +172,15 @@ public class VoucherServiceImpl implements VoucherService {
                                     .minTransactionAmount(request.getMinTransactionAmount())
                                     .validFrom(request.getValidFrom())
                                     .validUntil(request.getValidUntil())
-                                    .status("CLAIMED")
+                                    .status("AVAILABLE")
                                     .actionDate(Instant.now())
                                     .actionPerformedBy(SecurityUtil.requireUserRole().name())
-                                    .actionReason("Claimed by "+ SecurityUtil.requireUserRole().name())
+                                    .actionReason("Issued to "+ SecurityUtil.requireUserRole().name())
                                     .build()
                     );
 
                     return Voucher.builder()
-                            .ownerId(ownerId)
+                            .issuerId(issuerId)
                             .code(code)
                             .discountAmount(request.getDiscountAmount())
                             .minTransactionAmount(request.getMinTransactionAmount())
@@ -210,51 +236,37 @@ public class VoucherServiceImpl implements VoucherService {
 
         if (voucher.getStatus() != VoucherStatus.VALID)
             throw new IllegalStateException("Can only revoke VALID vouchers");
-        Account account = accountRepository.findById(voucher.getOwnerId())
-                .orElseThrow(() -> new IllegalArgumentException("Account not found"));
-        String code = voucher.getCode();
-        emailService.sendVoucherEmail(account.getEmail(), account.getFullName(),
-                EmailType.VOUCHER_REVOKED, VoucherEmailContext.builder()
-                        .voucherCode(code)
-                        .discountAmount(voucher.getDiscountAmount())
-                        .minTransactionAmount(voucher.getMinTransactionAmount())
-                        .validFrom(voucher.getValidFrom())
-                        .validUntil(voucher.getValidUntil())
-                        .status("Revoked")
-                        .actionDate(Instant.now())
-                        .actionPerformedBy(SecurityUtil.requireUserRole().name())
-                        .actionReason("Revoked by " + SecurityUtil.requireUserRole().name())
-                        .build()
-        );
+
         voucher.setStatus(VoucherStatus.REVOKED);
         voucherRepository.save(voucher);
     }
 
     @Override
-    public void use(String id) {
+    public void use(String code) {
         if (!SecurityUtil.hasRole(AccountRole.CUSTOMER))
             throw new NoPermissionException();
-        Voucher voucher = voucherRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Voucher not found"));
+        code = code.toUpperCase();
 
-        if (!voucher.getOwnerId().equals(SecurityUtil.requireUserId()))
-            throw new NoPermissionException();
+        Voucher voucher = voucherRepository.findByCode(code)
+                .orElseThrow(() -> new IllegalArgumentException("Voucher not found"));
 
         if (voucher.getStatus() != VoucherStatus.VALID)
             throw new IllegalStateException("Can only use VALID vouchers");
 
         voucher.setStatus(VoucherStatus.USED);
+        voucher.setUserId(SecurityUtil.requireUserId());
         voucherRepository.save(voucher);
     }
 
-    @Override
-    public List<VoucherDto> findMyVouchers() {
-        String currentUserId = SecurityUtil.requireUserId();
 
-        return voucherRepository.findByOwnerId(currentUserId)
-                .stream()
-                .filter(voucher -> voucher.getStatus() == VoucherStatus.VALID)
-                .map(voucherMapper::toDto)
-                .toList();
+    private static final String CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+
+    private static String generateRandomCode(int length) {
+        StringBuilder code = new StringBuilder(length);
+        for (int i = 0; i < length; i++) {
+            int index = ThreadLocalRandom.current().nextInt(CHARACTERS.length());
+            code.append(CHARACTERS.charAt(index));
+        }
+        return code.toString();
     }
 }

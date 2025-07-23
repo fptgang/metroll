@@ -18,5 +18,5 @@ public class VoucherCreateRequest {
     private BigDecimal minTransactionAmount;
     private Instant validFrom;
     private Instant validUntil;
-    private List<String> ownerIds;
+    private List<String> recipients;
 } 
