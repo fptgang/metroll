@@ -144,6 +144,11 @@ public class AccountServiceImpl implements AccountService {
         if (!SecurityUtil.hasRole(AccountRole.ADMIN))
             throw new NoPermissionException();
 
+        // Validate role
+        if (request.getRole() != AccountRole.CUSTOMER && request.getRole() != AccountRole.STAFF) {
+            throw new IllegalArgumentException("Account role must be either CUSTOMER or STAFF");
+        }
+
         // Check for email uniqueness
         Preconditions.checkArgument(
             !accountRepository.existsByEmail(request.getEmail()),
@@ -173,6 +178,11 @@ public class AccountServiceImpl implements AccountService {
     public AccountDto create(String id, AccountCreateRequest request) {
         if (!SecurityUtil.hasRole(AccountRole.ADMIN))
             throw new NoPermissionException();
+
+        // Validate role
+        if (request.getRole() != AccountRole.CUSTOMER && request.getRole() != AccountRole.STAFF) {
+            throw new IllegalArgumentException("Account role must be either CUSTOMER or STAFF");
+        }
 
         // Check for email uniqueness
         Preconditions.checkArgument(
@@ -207,7 +217,25 @@ public class AccountServiceImpl implements AccountService {
 
         // Only admin can update role
         if (SecurityUtil.hasRole(AccountRole.ADMIN)) {
-            account.setRole(request.getRole());
+            AccountRole currentRole = account.getRole();
+            AccountRole requestedRole = request.getRole();
+            if (requestedRole != null) {
+                if (currentRole == AccountRole.CUSTOMER) {
+                    // CUSTOMER can be upgraded to STAFF or remain CUSTOMER
+                    if (requestedRole == AccountRole.CUSTOMER || requestedRole == AccountRole.STAFF) {
+                        account.setRole(requestedRole);
+                    } else {
+                        // Cannot upgrade CUSTOMER directly to ADMIN
+                        throw new IllegalArgumentException("Cannot upgrade CUSTOMER directly to ADMIN");
+                    }
+                } else if (currentRole == AccountRole.STAFF || currentRole == AccountRole.ADMIN) {
+                    // STAFF or ADMIN cannot be downgraded or changed
+                    if (requestedRole != currentRole) {
+                        throw new IllegalArgumentException("Cannot change role of STAFF or ADMIN account");
+                    }
+                    // else: keep as is
+                }
+            }
         }
 
         account = accountRepository.save(account);
