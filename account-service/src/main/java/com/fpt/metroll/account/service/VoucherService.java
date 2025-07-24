@@ -4,7 +4,9 @@ import com.fpt.metroll.account.domain.dto.VoucherCreateRequest;
 import com.fpt.metroll.account.domain.dto.VoucherUpdateRequest;
 import com.fpt.metroll.shared.domain.dto.PageDto;
 import com.fpt.metroll.shared.domain.dto.PageableDto;
+import com.fpt.metroll.shared.domain.dto.voucher.VoucherCompensationRequest;
 import com.fpt.metroll.shared.domain.dto.voucher.VoucherDto;
+import jakarta.validation.Valid;
 
 import java.util.List;
 import java.util.Optional;
@@ -29,4 +31,6 @@ public interface VoucherService {
     void preserve(String id, String userId);
 
     void unpreserve(String id);
+
+    Boolean createCompensationVoucher(List<VoucherCompensationRequest> request);
 }

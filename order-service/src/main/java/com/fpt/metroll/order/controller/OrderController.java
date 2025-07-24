@@ -26,6 +26,7 @@ import vn.payos.type.PaymentLinkData;
 import vn.payos.type.Webhook;
 import vn.payos.type.WebhookData;
 
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -188,5 +189,13 @@ public class OrderController {
                                 webhookUrl);
                 String result = payOSService.confirmWebhook(webhookUrl);
                 return ResponseEntity.ok(result);
+        }
+
+        @GetMapping("/orders/p2p-journeys")
+        @Operation(summary = "Get order details by P2P journey IDs")
+        public ResponseEntity<Object> getOrderDetailsByP2PJourneys(
+                @RequestParam("p2pJourneyIds") String p2pJourneyIds) {
+            String[] ids = p2pJourneyIds.split(",");
+            return ResponseEntity.ok(orderService.getOrderDetailsByP2PJourneys(List.of(ids)));
         }
 }

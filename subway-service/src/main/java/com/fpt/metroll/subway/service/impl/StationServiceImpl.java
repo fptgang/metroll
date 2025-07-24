@@ -65,6 +65,11 @@ public class StationServiceImpl implements StationService {
         if(station.getId()!=null) {
             if(stationDto.getStatus().equals("CLOSED")){
             ticketClient.deactivateP2PJourneyByStation(station.getCode());
+            ticketClient.cancelTicketsByStation(station.getCode());
+            }
+
+            if(stationDto.getStatus().equals("UNDER_MAINTENANCE")) {
+                ticketClient.cancelTicketsByStation(station.getCode());
             }
         }
         station = stationRepository.save(station);

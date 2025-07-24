@@ -2,6 +2,7 @@ package com.fpt.metroll.shared.service.impl;
 
 import com.fpt.metroll.shared.config.EmailConfig;
 import com.fpt.metroll.shared.domain.dto.email.EmailRequest;
+import com.fpt.metroll.shared.domain.dto.email.TicketCompensationEmailContext;
 import com.fpt.metroll.shared.domain.dto.email.VoucherEmailContext;
 import com.fpt.metroll.shared.domain.dto.email.DiscountPackageEmailContext;
 import com.fpt.metroll.shared.domain.dto.email.OrderEmailContext;
@@ -222,6 +223,42 @@ public class EmailServiceImpl implements EmailService {
             log.error("Failed to send test email to {}: {}", recipientEmail, e.getMessage(), e);
         }
     }
+
+    @Override
+    public void sendTicketCompensationEmail(String recipientEmail, String recipientName, TicketCompensationEmailContext context) {
+        try {
+            String subject = "[Metroll] Ticket Compensation and Voucher";
+            String templateName = "ticket-compensation";
+
+            Map<String, Object> variables = new HashMap<>();
+            variables.put("recipientName", recipientName);
+            variables.put("cancelledTicketId", context.getCancelledTicketId());
+            variables.put("fromStationName", context.getFromStationName());
+            variables.put("toStationName", context.getToStationName());
+            variables.put("voucherCode", context.getVoucherCode());
+            variables.put("discountAmount", context.getDiscountAmount());
+            variables.put("minTransactionAmount", context.getMinTransactionAmount());
+            variables.put("validFrom",
+                    context.getValidFrom() != null ? DateTimeUtil.fromInstantToOffset(context.getValidFrom()) : "N/A");
+            variables.put("validUntil",
+                    context.getValidUntil() != null ? DateTimeUtil.fromInstantToOffset(context.getValidUntil()) : "N/A");
+            variables.put("currentYear", java.time.Year.now().getValue());
+
+            EmailRequest emailRequest = EmailRequest.builder()
+                    .recipientEmail(recipientEmail)
+                    .recipientName(recipientName)
+                    .subject(subject)
+                    .templateName(templateName)
+                    .templateVariables(variables)
+                    .isHtml(true)
+                    .build();
+
+            sendEmail(emailRequest);
+        } catch (Exception e) {
+            log.error("Failed to send ticket compensation email to {}: {}", recipientEmail, e.getMessage(), e);
+        }
+    }
+
 
     // Helper methods for email subjects
     private String getVoucherEmailSubject(EmailType emailType, VoucherEmailContext context) {

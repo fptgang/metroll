@@ -31,4 +31,6 @@ public interface TicketService {
     List<TicketDto> createTickets(List<TicketUpsertRequest> ticketRequests);
 
     String generateQRCodeBase64(String id) throws Exception ;
+
+    void cancelTicketByStation(String stationId);
 }

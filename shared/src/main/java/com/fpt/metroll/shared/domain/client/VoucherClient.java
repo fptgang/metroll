@@ -1,5 +1,6 @@
 package com.fpt.metroll.shared.domain.client;
 
+import com.fpt.metroll.shared.domain.dto.voucher.VoucherCompensationRequest;
 import com.fpt.metroll.shared.domain.dto.voucher.VoucherDto;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.*;
@@ -21,4 +22,9 @@ public interface VoucherClient {
 
     @PutMapping("/vouchers/{voucherId}/unpreserve")
     void unpreserve(@PathVariable("voucherId") String voucherId);
+
+    @PostMapping("/compensation")
+    Object createCompensationVoucher(
+            @RequestBody List<VoucherCompensationRequest> request
+    );
 }

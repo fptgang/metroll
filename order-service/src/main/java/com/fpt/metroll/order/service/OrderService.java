@@ -6,6 +6,7 @@ import com.fpt.metroll.shared.domain.dto.order.CheckoutRequest;
 import com.fpt.metroll.shared.domain.dto.order.OrderDto;
 import com.fpt.metroll.shared.domain.dto.order.OrderDetailDto;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface OrderService {
@@ -28,4 +29,6 @@ public interface OrderService {
     Optional<OrderDetailDto> getOrderDetailById(String orderDetailId);
 
     OrderDetailDto requireOrderDetailById(String orderDetailId);
+
+    List<OrderDetailDto> getOrderDetailsByP2PJourneys(List<String> p2pIds);
 }

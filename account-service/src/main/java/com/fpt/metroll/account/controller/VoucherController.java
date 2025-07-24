@@ -5,6 +5,7 @@ import com.fpt.metroll.account.domain.dto.VoucherUpdateRequest;
 import com.fpt.metroll.account.service.VoucherService;
 import com.fpt.metroll.shared.domain.dto.PageDto;
 import com.fpt.metroll.shared.domain.dto.PageableDto;
+import com.fpt.metroll.shared.domain.dto.voucher.VoucherCompensationRequest;
 import com.fpt.metroll.shared.domain.dto.voucher.VoucherDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -17,6 +18,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @RestController
@@ -91,5 +93,14 @@ public class VoucherController {
     public ResponseEntity<Void> unpreserveVoucher(@PathVariable("id") String id) {
         voucherService.unpreserve(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "create compensation voucher")
+    @PostMapping("/compensation")
+    public ResponseEntity<Object> createCompensationVoucher(
+            @RequestBody @Valid List<VoucherCompensationRequest> request) {
+        return ResponseEntity.ok(
+                Map.of("success", voucherService.createCompensationVoucher(request))
+        );
     }
 }

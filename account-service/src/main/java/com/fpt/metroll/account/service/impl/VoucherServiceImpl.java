@@ -10,7 +10,9 @@ import com.fpt.metroll.account.repository.VoucherRepository;
 import com.fpt.metroll.account.service.VoucherService;
 import com.fpt.metroll.shared.domain.dto.PageDto;
 import com.fpt.metroll.shared.domain.dto.PageableDto;
+import com.fpt.metroll.shared.domain.dto.email.TicketCompensationEmailContext;
 import com.fpt.metroll.shared.domain.dto.email.VoucherEmailContext;
+import com.fpt.metroll.shared.domain.dto.voucher.VoucherCompensationRequest;
 import com.fpt.metroll.shared.domain.dto.voucher.VoucherDto;
 import com.fpt.metroll.shared.domain.enums.AccountRole;
 import com.fpt.metroll.shared.domain.enums.EmailType;
@@ -289,6 +291,55 @@ public class VoucherServiceImpl implements VoucherService {
         voucher.setStatus(VoucherStatus.VALID);
         voucher.setUserId(null);
         voucherRepository.save(voucher);
+    }
+
+    //@Transactional maybe
+    //@Async send email part if too slow
+    @Override
+    public Boolean createCompensationVoucher(List<VoucherCompensationRequest> request) {
+        List<Voucher> vouchers = request.stream()
+                .map(req -> {
+                    String code;
+                    do {
+                        code = generateRandomCode(6);
+                    } while (voucherRepository.existsByCode(code));
+
+                    Account account = accountRepository.findById(req.getUserId())
+                            .orElseThrow(() -> new IllegalArgumentException("Account not found for userId: " + req.getUserId()));
+
+                    TicketCompensationEmailContext context = TicketCompensationEmailContext.builder()
+                            .cancelledTicketId(req.getCompensationId())
+                            .fromStationName(req.getFromStationName())
+                            .toStationName(req.getToStationName())
+                            .voucherCode(code)
+                            .discountAmount(req.getDiscountAmount())
+                            .minTransactionAmount(req.getMinTransactionAmount())
+                            .validFrom(req.getValidFrom())
+                            .validUntil(req.getValidUntil())
+                            .build();
+
+                    emailService.sendTicketCompensationEmail(
+                            account.getEmail(),
+                            account.getFullName(),
+                            context
+                    );
+
+                    return Voucher.builder()
+                            .code(code)
+                            .discountAmount(req.getDiscountAmount())
+                            .minTransactionAmount(req.getMinTransactionAmount())
+                            .validFrom(req.getValidFrom())
+                            .validUntil(req.getValidUntil())
+                            .status(VoucherStatus.VALID)
+                            .userId(req.getUserId())
+                            .build();
+                })
+                .collect(Collectors.toList());
+
+        voucherRepository.saveAll(vouchers);
+
+
+        return true;
     }
 
     private static final String CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";

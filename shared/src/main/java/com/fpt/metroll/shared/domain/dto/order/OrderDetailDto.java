@@ -17,6 +17,7 @@ import java.util.List;
 public class OrderDetailDto {
     private String id;
     private String orderId;
+    private String customerId;
 
     private String ticketId;
     

@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Metroll - Ticket Compensation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            color: #333;
+            background: #f4f4f4;
+            margin: 0; padding: 0;
+        }
+        .email-container {
+            background: #fff;
+            max-width: 600px;
+            margin: 24px auto;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+        .header {
+            background: #2c3e50;
+            color: #fff;
+            text-align: center;
+            padding: 24px 10px 10px 10px;
+        }
+        .header h1 { margin: 0; font-size: 24px; }
+        .content { padding: 32px 24px 24px 24px; }
+        .greeting { margin-top: 0; }
+        .ticket-info, .voucher-info {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 5px;
+            margin-bottom: 24px;
+            padding: 18px;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        .info-label {
+            font-weight: bold; color: #555;
+        }
+        .info-value { color: #333; }
+        .voucher-code {
+            background: #e8f5e8;
+            border: 2px dashed #27ae60;
+            color: #27ae60;
+            font-size: 20px;
+            font-weight: bold;
+            text-align: center;
+            margin: 18px 0 18px 0;
+            padding: 15px 0;
+            border-radius: 4px;
+            letter-spacing: 2px;
+        }
+        .amount { font-weight: bold; color: #27ae60; }
+        .footer {
+            background: #f8f9fa;
+            color: #888;
+            text-align: center;
+            padding: 14px;
+            font-size: 12px;
+            border-top: 1px solid #e9ecef;
+        }
+        @media (max-width: 600px) {
+            .content, .header, .ticket-info, .voucher-info { padding: 10px !important; }
+        }
+    </style>
+</head>
+<body>
+<div class="email-container">
+    <div class="header">
+        <h1>Metroll</h1>
+        <p>Ticket Compensation Notice</p>
+    </div>
+    <div class="content">
+        <p class="greeting">Dear <span th:text="${recipientName}">Customer</span>,</p>
+        <p>
+            We’re sorry to inform you that your ticket <strong th:text="${cancelledTicketId}">#123456</strong> for your journey from
+            <strong th:text="${fromStationName}">From Station</strong> to
+            <strong th:text="${toStationName}">To Station</strong> has been cancelled.<br>
+            <br>
+            As an apology for this inconvenience, we are providing you a compensation voucher to use on your next Metroll purchase.
+        </p>
+        <div class="ticket-info">
+            <div class="info-row">
+                <span class="info-label">Cancelled Ticket ID:</span>
+                <span class="info-value" th:text="${cancelledTicketId}">#123456</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Route:</span>
+                <span class="info-value">
+                        <span th:text="${fromStationName}">From</span>
+                        &nbsp;→&nbsp;
+                        <span th:text="${toStationName}">To</span>
+                    </span>
+            </div>
+        </div>
+        <div class="voucher-info">
+            <h3>Your Compensation Voucher</h3>
+            <div class="voucher-code" th:text="${voucherCode}">VOUCHER123</div>
+            <div class="info-row">
+                <span class="info-label">Discount Amount:</span>
+                <span class="info-value amount" th:text="${#numbers.formatCurrency(discountAmount)}">$10.00</span>
+            </div>
+            <div class="info-row" th:if="${minTransactionAmount != null}">
+                <span class="info-label">Min Transaction:</span>
+                <span class="info-value" th:text="${#numbers.formatCurrency(minTransactionAmount)}">$20.00</span>
+            </div>
+            <div class="info-row" th:if="${validFrom != null}">
+                <span class="info-label">Valid From:</span>
+                <span class="info-value" th:text="${validFrom}">January 1, 2024</span>
+            </div>
+            <div class="info-row" th:if="${validUntil != null}">
+                <span class="info-label">Valid Until:</span>
+                <span class="info-value" th:text="${validUntil}">December 31, 2024</span>
+            </div>
+        </div>
+        <p><strong>How to redeem:</strong></p>
+        <ol>
+            <li>Choose your next metro ticket(s) in the Metroll app.</li>
+            <li>Proceed to checkout and enter your voucher code: <strong th:text="${voucherCode}">VOUCHER123</strong></li>
+            <li>Enjoy your discount!</li>
+        </ol>
+        <p style="color:#d35400;"><strong>Note:</strong> Voucher can only be used once and must be redeemed before it expires.</p>
+        <p>Thank you for choosing Metroll. We appreciate your understanding and look forward to serving you soon.</p>
+    </div>
+    <div class="footer">
+        <p>© <span th:text="${currentYear}">2024</span> Metroll. All rights reserved.</p>
+        <p>This is an automated message. Please do not reply.</p>
+    </div>
+</div>
+</body>
+</html>
