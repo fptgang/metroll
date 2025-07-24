@@ -221,7 +221,7 @@
                     </div>
                     <div class="info-row">
                         <span class="info-label">Price:</span>
-                        <span class="info-value" th:text="${#numbers.formatCurrency(item.finalTotal)}">$5.00</span>
+                        <span class="info-value" th:text="${item.finalTotal}+'đ'">$5.00</span>
                     </div>
                 </div>
             </div>
@@ -230,11 +230,11 @@
                 <h3>Order Summary</h3>
                 <div class="total-row">
                     <span>Subtotal:</span>
-                    <span th:text="${#numbers.formatCurrency(baseTotal)}">$20.00</span>
+                    <span th:text="${baseTotal}+'đ'">$20.00</span>
                 </div>
                 <div class="total-row" th:if="${discountTotal != null and discountTotal > 0}">
                     <span>Discount:</span>
-                    <span th:text="'-' + ${#numbers.formatCurrency(discountTotal)}">-$5.00</span>
+                    <span th:text="'-' + ${discountTotal}+'đ'">-$5.00</span>
                 </div>
                 <div class="total-row" th:if="${voucherCode != null}">
                     <span>Voucher (<span th:text="${voucherCode}">VOUCHER123</span>):</span>
@@ -246,7 +246,7 @@
                 </div>
                 <div class="total-row final">
                     <span>Total Paid:</span>
-                    <span class="amount" th:text="${#numbers.formatCurrency(finalTotal)}">$15.00</span>
+                    <span class="amount" th:text="${finalTotal}+'đ'">$15.00</span>
                 </div>
             </div>
             
