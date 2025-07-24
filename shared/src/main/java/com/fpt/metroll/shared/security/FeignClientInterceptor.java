@@ -1,5 +1,6 @@
 package com.fpt.metroll.shared.security;
 
+import com.fpt.metroll.shared.util.SecurityUtil;
 import feign.RequestInterceptor;
 import feign.RequestTemplate;
 import jakarta.servlet.http.HttpServletRequest;
@@ -16,11 +17,15 @@ public class FeignClientInterceptor implements RequestInterceptor {
                 RequestContextHolder.getRequestAttributes();
         if (attributes == null) return;
 
-        HttpServletRequest request = attributes.getRequest();
+//        HttpServletRequest request = attributes.getRequest();
+//
+//        String userId = request.getHeader("X-User-Id");
+//        String role = request.getHeader("X-User-Role");
+//        String email = request.getHeader("X-User-Email");
 
-        String userId = request.getHeader("X-User-Id");
-        String role = request.getHeader("X-User-Role");
-        String email = request.getHeader("X-User-Email");
+        String userId = SecurityUtil.getUserId();
+        String role = SecurityUtil.getUserRole() == null ? null : SecurityUtil.getUserRole().toString();
+        String email = SecurityUtil.getUserEmail();
 
         if (userId != null) {
             template.header("X-User-Id", userId);

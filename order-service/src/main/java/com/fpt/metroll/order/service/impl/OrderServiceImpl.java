@@ -175,7 +175,7 @@ public class OrderServiceImpl implements OrderService {
             detail.setOrder(order);
         }
 
-        if (SecurityUtil.hasRole(AccountRole.STAFF, AccountRole.ADMIN) ||
+        if ((SecurityUtil.hasRole(AccountRole.STAFF, AccountRole.ADMIN) && "CASH".equals(checkoutRequest.getPaymentMethod())) ||
                 order.getFinalTotal().abs().compareTo(new BigDecimal("0.000001")) < 0) {
             order.setStatus(OrderStatus.COMPLETED);
             order = orderRepository.save(order);
