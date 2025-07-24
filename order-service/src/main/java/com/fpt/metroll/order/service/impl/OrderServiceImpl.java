@@ -184,7 +184,6 @@ public class OrderServiceImpl implements OrderService {
             order.setTransactionReference(generateTransactionReference());
             order = orderRepository.save(order);
             createPayOSPaymentLink(order);
-            sendOrderEmail(order, EmailType.ORDER_PAYMENT_CONFIRMATION);
         }
 
 
@@ -197,6 +196,8 @@ public class OrderServiceImpl implements OrderService {
                 voucherClient.preserve(voucherId, customerId);
             });
         }
+        sendOrderEmail(order, EmailType.ORDER_CHECKOUT_SUCCESS);
+
 
         log.info("Created order {} for customer {} with staff {} and final total {}",
                 order.getId(), customerId, staffId, finalTotal);
