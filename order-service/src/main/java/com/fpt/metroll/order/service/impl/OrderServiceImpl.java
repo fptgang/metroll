@@ -38,6 +38,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
@@ -137,10 +138,10 @@ public class OrderServiceImpl implements OrderService {
                     .p2pJourney(p2pJourneyId)
                     .timedTicketPlan(timedTicketPlanId)
 //                    .quantity(item.getQuantity())
-                    .unitPrice(unitPrice)
-                    .baseTotal(itemBaseTotal)
+                    .unitPrice(unitPrice.setScale(0, RoundingMode.HALF_UP))
+                    .baseTotal(itemBaseTotal.setScale(0, RoundingMode.HALF_UP))
                     .discountTotal(BigDecimal.ZERO) // Will be calculated later
-                    .finalTotal(itemBaseTotal) // Will be updated after discount calculation
+                    .finalTotal(itemBaseTotal.setScale(0, RoundingMode.HALF_UP)) // Will be updated after discount calculation
                     .build();
 
             orderDetails.add(orderDetail);
@@ -162,9 +163,9 @@ public class OrderServiceImpl implements OrderService {
                 .customerId(customerId)
                 .discountPackage(packageId)
                 .voucher(checkoutRequest.getVoucherId())
-                .baseTotal(baseTotal)
-                .discountTotal(totalDiscountAmount)
-                .finalTotal(finalTotal)
+                .baseTotal(baseTotal.setScale(0, RoundingMode.HALF_UP))
+                .discountTotal(totalDiscountAmount.setScale(0, RoundingMode.HALF_UP))
+                .finalTotal(finalTotal.setScale(0, RoundingMode.HALF_UP))
                 .paymentMethod(checkoutRequest.getPaymentMethod())
                 .status(OrderStatus.PENDING)
                 .orderDetails(orderDetails)
@@ -180,24 +181,24 @@ public class OrderServiceImpl implements OrderService {
             order.setStatus(OrderStatus.COMPLETED);
             order = orderRepository.save(order);
             createTicketsForOrder(order);
-        } else {
-            if (checkoutRequest.getVoucherId() != null &&
-                    !checkoutRequest.getVoucherId().isEmpty()
-                    && customerId != null) {
-                final String voucherId = checkoutRequest.getVoucherId();
-
-                SecurityUtil.elevate(AccountRole.ADMIN, () -> {
-                    voucherClient.preserve(voucherId, customerId);
-                });
-            }
-
-            if ("PAYOS".equals(checkoutRequest.getPaymentMethod())) {
-                order.setTransactionReference(generateTransactionReference());
-                order = orderRepository.save(order);
-                createPayOSPaymentLink(order);
-                sendOrderEmail(order, EmailType.ORDER_PAYMENT_CONFIRMATION);
-            }
+        } else if ("PAYOS".equals(checkoutRequest.getPaymentMethod())) {
+            order.setTransactionReference(generateTransactionReference());
+            order = orderRepository.save(order);
+            createPayOSPaymentLink(order);
         }
+
+
+        if (checkoutRequest.getVoucherId() != null &&
+                !checkoutRequest.getVoucherId().isEmpty()
+                && customerId != null) {
+            final String voucherId = checkoutRequest.getVoucherId();
+
+            SecurityUtil.elevate(AccountRole.ADMIN, () -> {
+                voucherClient.preserve(voucherId, customerId);
+            });
+        }
+        sendOrderEmail(order, EmailType.ORDER_CHECKOUT_SUCCESS);
+
 
         log.info("Created order {} for customer {} with staff {} and final total {}",
                 order.getId(), customerId, staffId, finalTotal);
@@ -513,7 +514,7 @@ public class OrderServiceImpl implements OrderService {
         for (OrderDetail detail : orderDetails) {
             // Calculate proportional discount for this item
             BigDecimal proportion = detail.getBaseTotal().divide(baseTotal, 4, BigDecimal.ROUND_HALF_UP);
-            BigDecimal itemDiscount = totalDiscount.multiply(proportion).setScale(2, BigDecimal.ROUND_HALF_UP);
+            BigDecimal itemDiscount = totalDiscount.multiply(proportion).setScale(0, BigDecimal.ROUND_HALF_UP);
 
             detail.setDiscountTotal(itemDiscount);
             detail.setFinalTotal(detail.getBaseTotal().subtract(itemDiscount).max(BigDecimal.ZERO));
@@ -579,7 +580,7 @@ public class OrderServiceImpl implements OrderService {
 
             // Get staff account information if order was created by staff
             String staffName = null;
-            if (order.getStaffId() != null) {
+            if (order.getStaffId() != null && !order.getStaffId().isBlank()) {
                 try {
                     AccountDto staffAccount = accountClient.getAccount(order.getStaffId());
                     staffName = staffAccount.getFullName();
@@ -590,7 +591,7 @@ public class OrderServiceImpl implements OrderService {
 
             // Get voucher code if used
             String voucherCode = null;
-            if (order.getVoucher() != null) {
+            if (order.getVoucher() != null && !order.getVoucher().isEmpty()) {
                 try {
                     VoucherDto voucher = voucherClient.getVoucher(order.getVoucher());
                     voucherCode = voucher.getCode();
@@ -601,7 +602,7 @@ public class OrderServiceImpl implements OrderService {
 
             // Get discount package name if used
             String discountPackageName = null;
-            if (order.getDiscountPackage() != null) {
+            if (order.getDiscountPackage() != null && !order.getDiscountPackage().isEmpty()) {
                 try {
                     DiscountPackageDto discountPackage = discountPackageClient.getDiscountPackage(order.getDiscountPackage());
                     discountPackageName = discountPackage.getName();
@@ -618,10 +619,10 @@ public class OrderServiceImpl implements OrderService {
                 OrderEmailContext.OrderItemContext itemContext = OrderEmailContext.OrderItemContext.builder()
                         .ticketType(detail.getTicketType().name())
                         .description(description)
-                        .unitPrice(detail.getUnitPrice())
-                        .baseTotal(detail.getBaseTotal())
-                        .discountTotal(detail.getDiscountTotal())
-                        .finalTotal(detail.getFinalTotal())
+                        .unitPrice(detail.getUnitPrice().setScale(0, RoundingMode.HALF_UP))
+                        .baseTotal(detail.getBaseTotal().setScale(0, RoundingMode.HALF_UP))
+                        .discountTotal(detail.getDiscountTotal().setScale(0, RoundingMode.HALF_UP))
+                        .finalTotal(detail.getFinalTotal().setScale(0, RoundingMode.HALF_UP))
                         .ticketId(detail.getTicketId())
                         .validUntil(calculateValidUntil(detail))
                         .build();
@@ -633,9 +634,9 @@ public class OrderServiceImpl implements OrderService {
             OrderEmailContext context = OrderEmailContext.builder()
                     .orderId(order.getId())
                     .transactionReference(order.getTransactionReference())
-                    .baseTotal(order.getBaseTotal())
-                    .discountTotal(order.getDiscountTotal())
-                    .finalTotal(order.getFinalTotal())
+                    .baseTotal(order.getBaseTotal().setScale(0, RoundingMode.HALF_UP))
+                    .discountTotal(order.getDiscountTotal().setScale(0, RoundingMode.HALF_UP))
+                    .finalTotal(order.getFinalTotal().setScale(0, RoundingMode.HALF_UP))
                     .paymentMethod(order.getPaymentMethod())
                     .status(order.getStatus().name())
                     .orderDate(order.getCreatedAt())
