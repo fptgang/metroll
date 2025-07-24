@@ -78,18 +78,30 @@ public class P2PJourneyServiceImpl implements P2PJourneyService {
     }
 
     @Override
-    @Cacheable(key = "'findById:' + #id")
+//    @Cacheable(key = "'findById:' + #id")
     public Optional<P2PJourneyDto> findById(String id) {
         Preconditions.checkNotNull(id, "ID cannot be null");
+        List<StationDto> unavailableStations = subwayClient.listUnavailableStations();
+        List<String> unavailableStationCodes = unavailableStations.stream().map(StationDto::getCode).toList();
         if (!SecurityUtil.hasRole(AccountRole.ADMIN)) {
             // Only active journeys for non-admin users
-            return repository.findByIdAndIsActiveTrue(id).map(mapper::toDto);
+            Optional<P2PJourney> journeyOpt = repository.findByIdAndIsActiveTrue(id);
+            // Only active journeys for non-admin users
+            if (journeyOpt.isPresent()) {
+                P2PJourney journey = journeyOpt.get();
+                if (unavailableStationCodes.contains(journey.getStartStationId()) || unavailableStationCodes.contains(journey.getEndStationId())) {
+                    throw new RuntimeException("Ticket is not available");
+                }
+                return Optional.of(mapper.toDto(journey));
+            }
+            return Optional.empty();
+
         }
         return repository.findById(id).map(mapper::toDto);
     }
 
     @Override
-    @Cacheable(key = "'requireById:' + #id")
+//    @Cacheable(key = "'requireById:' + #id")
     public P2PJourneyDto requireById(String id) {
         return findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("P2P journey not found"));
