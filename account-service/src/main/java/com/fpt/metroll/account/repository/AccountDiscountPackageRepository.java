@@ -18,5 +18,8 @@ public interface AccountDiscountPackageRepository extends MongoRepository<Accoun
     Optional<AccountDiscountPackage> findByAccountIdAndStatusAndValidUntilAfter(
             String accountId, AccountDiscountStatus status, Instant currentTime);
     
+    List<AccountDiscountPackage> findByStatusAndValidUntilBefore(
+            AccountDiscountStatus status, Instant currentTime);
+    
     List<AccountDiscountPackage> findByDiscountPackageId(String discountPackageId);
 } 

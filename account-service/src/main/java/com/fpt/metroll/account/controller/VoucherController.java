@@ -51,6 +51,12 @@ public class VoucherController {
         return ResponseEntity.ok(voucherService.requireById(id));
     }
 
+    @Operation(summary = "Get voucher by code")
+    @GetMapping("/code/{code}")
+    public ResponseEntity<VoucherDto> getVoucherByCode(@PathVariable("code") String code) {
+        return ResponseEntity.ok(voucherService.requireByCode(code));
+    }
+
     @Operation(summary = "Update voucher")
     @PutMapping("/{id}")
     public ResponseEntity<VoucherDto> updateVoucher(@PathVariable("id") String id,
@@ -72,9 +78,18 @@ public class VoucherController {
         return ResponseEntity.noContent().build();
     }
 
-    @Operation(summary = "Get my vouchers")
-    @GetMapping("/my-vouchers")
-    public ResponseEntity<List<VoucherDto>> getMyVouchers() {
-        return ResponseEntity.ok(voucherService.findMyVouchers());
+    @Operation(summary = "Preserve voucher")
+    @PutMapping("/{id}/preserve")
+    public ResponseEntity<Void> preserveVoucher(@PathVariable("id") String id,
+                                                @RequestParam(name = "userId", required = false) String userId) {
+        voucherService.preserve(id, userId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Unpreserve voucher")
+    @PutMapping("/{id}/unpreserve")
+    public ResponseEntity<Void> unpreserveVoucher(@PathVariable("id") String id) {
+        voucherService.unpreserve(id);
+        return ResponseEntity.noContent().build();
     }
 }

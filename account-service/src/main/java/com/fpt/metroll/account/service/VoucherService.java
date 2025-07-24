@@ -16,6 +16,8 @@ public interface VoucherService {
 
     VoucherDto requireById(String id);
 
+    VoucherDto requireByCode(String code);
+
     List<VoucherDto> create(VoucherCreateRequest request);
 
     VoucherDto update(String id, VoucherUpdateRequest request);
@@ -24,5 +26,7 @@ public interface VoucherService {
 
     void use(String id);
 
-    List<VoucherDto> findMyVouchers();
+    void preserve(String id, String userId);
+
+    void unpreserve(String id);
 }
