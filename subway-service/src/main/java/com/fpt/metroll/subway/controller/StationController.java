@@ -46,6 +46,12 @@ public class StationController {
         return ResponseEntity.ok(stationService.findAll(queryParam, pageable));
     }
 
+    @GetMapping("/unavailable")
+    @Operation(summary = "List unavailable stations")
+    public ResponseEntity<List<StationDto>> listUnavailableStations() {
+        return ResponseEntity.ok(stationService.findAllUnavailableStations());
+    }
+
     @GetMapping("/{code}")
     @Operation(summary = "Get station by code")
     public ResponseEntity<StationDto> getStationByCode(

@@ -2,6 +2,7 @@ package com.fpt.metroll.ticket.service.impl;
 
 import com.fpt.metroll.shared.domain.client.SubwayClient;
 import com.fpt.metroll.shared.domain.dto.subway.StationDto;
+import com.fpt.metroll.shared.domain.dto.subway.StationQueryParam;
 import com.fpt.metroll.ticket.document.P2PJourney;
 import com.fpt.metroll.ticket.domain.dto.P2PJourneyCreateRequest;
 import com.fpt.metroll.ticket.domain.dto.P2PJourneyUpdateRequest;
@@ -24,6 +25,7 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Optional;
 
 @Slf4j
@@ -46,13 +48,22 @@ public class P2PJourneyServiceImpl implements P2PJourneyService {
     }
 
     @Override
-    @Cacheable(key = "'findAll:' + (#search != null ? #search : 'null') + ':' + #pageable.page + ':' + #pageable.size + ':' + (#pageable.sort != null ? #pageable.sort : 'null')")
+//    @Cacheable(key = "'findAll:' + (#search != null ? #search : 'null') + ':' + #pageable.page + ':' + #pageable.size + ':' + (#pageable.sort != null ? #pageable.sort : 'null') + ':' ")
     public PageDto<P2PJourneyDto> findAll(String search, PageableDto pageable) {
         // Anyone can view P2P journeys
+
+        List<StationDto> unavailableStations = subwayClient.listUnavailableStations();
+        List<String> unavailableStationCodes = unavailableStations.stream().map(StationDto::getCode).toList();
+
+        log.info("Unavailable stations: {}", unavailableStationCodes.size());
+        unavailableStationCodes.forEach(code -> log.info("Unavailable station: {}", code));
+
         var res = mongoHelper.find(query -> {
             // Filter only active records
             if (!SecurityUtil.hasRole(AccountRole.ADMIN)) {
                 query.addCriteria(Criteria.where("isActive").is(true));
+                query.addCriteria(Criteria.where("startStationId").nin(unavailableStationCodes));
+                query.addCriteria(Criteria.where("endStationId").nin(unavailableStationCodes));
             }
 
             if (search != null && !search.isBlank()) {
@@ -85,13 +96,16 @@ public class P2PJourneyServiceImpl implements P2PJourneyService {
     }
 
     @Override
-    @Cacheable(key = "'findByStations:' + (#startStationId != null ? #startStationId : 'null') + ':' + (#endStationId != null ? #endStationId : 'null') + ':' + #pageable.page + ':' + #pageable.size + ':' + (#pageable.sort != null ? #pageable.sort : 'null')")
+//    @Cacheable(key = "'findByStations:' + (#startStationId != null ? #startStationId : 'null') + ':' + (#endStationId != null ? #endStationId : 'null') + ':' + #pageable.page + ':' + #pageable.size + ':' + (#pageable.sort != null ? #pageable.sort : 'null')")
     public PageDto<P2PJourneyDto> findByStations(PageableDto pageable, String startStationId, String endStationId) {
         Criteria criteria = new Criteria();
-
+        List<StationDto> unavailableStations = subwayClient.listUnavailableStations();
+        List<String> unavailableStationCodes = unavailableStations.stream().map(StationDto::getCode).toList();
         // Always filter by active records
         if (!SecurityUtil.hasRole(AccountRole.ADMIN)) {
             criteria.and("isActive").is(true);
+            criteria.and("startStationId").nin(unavailableStationCodes);
+            criteria.and("endStationId").nin(unavailableStationCodes);
         }
 
         if ((startStationId != null && endStationId != null)
@@ -205,7 +219,7 @@ public class P2PJourneyServiceImpl implements P2PJourneyService {
 
     @Override
     @CacheEvict(allEntries = true)
-    public void deactivateP2PJourneyByStation(String stationId){
+    public void deactivateP2PJourneyByStation(String stationId) {
         repository.findByStartStationIdOrEndStationId(stationId, stationId).forEach(document -> {
             // Soft delete: set isActive to false instead of hard delete
             document.setIsActive(false);
@@ -245,15 +259,15 @@ public class P2PJourneyServiceImpl implements P2PJourneyService {
 
     public void validateStations(String startStationId, String endStationId) {
         StationDto startStation = subwayClient.getStationByCode(startStationId);
-        StationDto endStation =  subwayClient.getStationByCode(endStationId);
+        StationDto endStation = subwayClient.getStationByCode(endStationId);
 
         if (startStation == null || endStation == null) {
             throw new IllegalArgumentException("Start or end station not found");
-        }else {
+        } else {
             if (startStation.getId().equals(endStation.getId())) {
                 throw new IllegalArgumentException("Start and end stations must be different");
             } else if (startStation.getStatus().equals("CLOSED") || endStation.getStatus().equals("CLOSED")) {
-                throw new IllegalArgumentException("Start and end stations must be open :\n"+ startStationId + " - " + startStation.getStatus() + ", \n " + endStationId + " - " + endStation.getStatus());
+                throw new IllegalArgumentException("Start and end stations must be open :\n" + startStationId + " - " + startStation.getStatus() + ", \n " + endStationId + " - " + endStation.getStatus());
             }
         }
     }

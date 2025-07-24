@@ -10,13 +10,13 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 
+import java.util.List;
+
 @FeignClient(name = "subway-service", contextId = "subwayClient", configuration = com.fpt.metroll.shared.config.FeignClientConfiguration.class)
 public interface SubwayClient {
 
-//    @GetMapping("/stations")
-//    PageDto<StationDto> listStations(
-//            @ParameterObject StationQueryParam queryParam,
-//            PageableDto pageable);
+    @GetMapping("/stations/unavailable")
+    List<StationDto> listUnavailableStations();
 
     @GetMapping("/stations/{code}")
     StationDto getStationByCode(@PathVariable("code") String stationCode);

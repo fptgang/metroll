@@ -17,6 +17,8 @@ import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 @Slf4j
 public class StationServiceImpl implements StationService {
@@ -88,5 +90,13 @@ public class StationServiceImpl implements StationService {
         }
 
         return query;
+    }
+
+    @Override
+    public List<StationDto> findAllUnavailableStations() {
+        return stationRepository.findAllUnavailableStations()
+                .stream()
+                .map(stationMapper::toDto)
+                .toList();
     }
 }
