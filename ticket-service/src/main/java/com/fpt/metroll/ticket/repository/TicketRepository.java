@@ -20,4 +20,6 @@ public interface TicketRepository extends MongoRepository<Ticket, String> {
     boolean existsByTicketNumber(String ticketNumber);
 
     List<Ticket> findByStatusAndValidUntilBefore(TicketStatus status, Instant now);
+
+    List<Ticket> findByTicketOrderDetailIdIn(List<String> ticketOrderDetailIds);
 }

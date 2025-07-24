@@ -1,6 +1,7 @@
 package com.fpt.metroll.shared.service;
 
 import com.fpt.metroll.shared.domain.dto.email.EmailRequest;
+import com.fpt.metroll.shared.domain.dto.email.TicketCompensationEmailContext;
 import com.fpt.metroll.shared.domain.dto.email.VoucherEmailContext;
 import com.fpt.metroll.shared.domain.dto.email.DiscountPackageEmailContext;
 import com.fpt.metroll.shared.domain.dto.email.OrderEmailContext;
@@ -35,4 +36,6 @@ public interface EmailService {
      * Test email connectivity
      */
     void sendTestEmail(String recipientEmail);
+
+    void sendTicketCompensationEmail(String recipientEmail, String recipientName, TicketCompensationEmailContext context);
 }

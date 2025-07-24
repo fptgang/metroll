@@ -99,4 +99,11 @@ public class TicketController {
     public ResponseEntity<String> generateQRCodeBase64(@PathVariable("id") String id) throws Exception {
         return ResponseEntity.ok(ticketService.generateQRCodeBase64(id));
     }
+
+    @Operation(summary = "Cancel tickets by station ID")
+    @GetMapping("/cancel/{stationId}")
+    public ResponseEntity<Void> cancelTicketsByStation(@PathVariable("stationId") String stationId) {
+        ticketService.cancelTicketByStation(stationId);
+        return ResponseEntity.noContent().build();
+    }
 }

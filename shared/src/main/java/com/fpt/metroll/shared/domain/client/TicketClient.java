@@ -14,6 +14,9 @@ import java.util.List;
 @FeignClient(name = "ticket-service", contextId = "ticketClient", configuration = com.fpt.metroll.shared.config.FeignClientConfiguration.class, fallbackFactory = TicketClient.TicketClientFallbackFactory.class)
 public interface TicketClient {
 
+    @GetMapping("/tickets/cancel/{stationId}")
+    void cancelTicketsByStation(@PathVariable("stationId") String stationId);
+
     @PostMapping("/tickets")
     TicketDto createTicket(TicketUpsertRequest ticketUpsertRequest);
     
@@ -39,6 +42,11 @@ public interface TicketClient {
 
         public TicketClientFallback(Throwable cause) {
             this.cause = cause;
+        }
+
+        @Override
+        public void cancelTicketsByStation(String stationId) {
+            //yet so
         }
 
         @Override

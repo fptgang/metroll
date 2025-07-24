@@ -16,6 +16,8 @@ public enum EmailType {
     ORDER_PAYMENT_CONFIRMATION,
     ORDER_PAYMENT_FAILED,
 
+    TICKET_COMPENSATION,
+
     // Test email
     TEST_EMAIL
 }

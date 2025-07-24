@@ -341,6 +341,20 @@ public class OrderServiceImpl implements OrderService {
                 .orElseThrow(() -> new IllegalArgumentException("Order detail not found"));
     }
 
+    @Override
+    public List<OrderDetailDto> getOrderDetailsByP2PJourneys(List<String> p2pIds) {
+
+        return orderDetailRepository.findByP2pJourneyInAndOrderStatusCompleted(p2pIds)
+                .stream()
+                .map(order -> {
+                    var dto = orderMapper.toDetailDto(order);
+                    dto.setOrderId(order.getOrder().getId());
+                    dto.setCustomerId(order.getOrder().getCustomerId());
+                    return dto;
+                })
+                .collect(Collectors.toList());
+    }
+
     private void createPayOSPaymentLink(Order order) {
         try {
             // Create PayOS payment link

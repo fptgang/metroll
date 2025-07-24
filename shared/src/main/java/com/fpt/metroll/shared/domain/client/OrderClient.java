@@ -6,7 +6,7 @@ import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
-import java.util.Map;
+import java.util.List;
 
 @FeignClient(name = "order-service", contextId = "orderClient", configuration = com.fpt.metroll.shared.config.FeignClientConfiguration.class)
 public interface OrderClient {
@@ -16,4 +16,7 @@ public interface OrderClient {
 
     @GetMapping("/order-details/{orderDetailId}")
     OrderDetailDto getOrderDetail(@PathVariable("orderDetailId") String orderDetailId);
+
+    @GetMapping("/orders/p2p-journeys")
+    List<OrderDetailDto> getOrderByp2pJourneyIds(String p2pJourneyIds);
 }

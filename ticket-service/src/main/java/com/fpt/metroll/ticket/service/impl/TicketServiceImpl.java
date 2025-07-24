@@ -2,8 +2,10 @@ package com.fpt.metroll.ticket.service.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fpt.metroll.shared.domain.client.OrderClient;
+import com.fpt.metroll.shared.domain.client.VoucherClient;
 import com.fpt.metroll.shared.domain.dto.order.OrderDetailDto;
 import com.fpt.metroll.shared.domain.dto.ticket.TicketUpsertRequest;
+import com.fpt.metroll.shared.domain.dto.voucher.VoucherCompensationRequest;
 import com.fpt.metroll.shared.domain.enums.TicketType;
 import com.fpt.metroll.ticket.document.P2PJourney;
 import com.fpt.metroll.ticket.document.Ticket;
@@ -34,8 +36,11 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
+import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -51,6 +56,7 @@ public class TicketServiceImpl implements TicketService {
     private final OrderClient orderClient;
     private final P2PJourneyRepository p2PJourneyRepository;
     private final DatabaseReference database;
+    private final VoucherClient voucherClient;
 
     public TicketServiceImpl(MongoHelper mongoHelper,
                              TicketMapper mapper,
@@ -297,6 +303,75 @@ public class TicketServiceImpl implements TicketService {
 
         return Base64.getEncoder().encodeToString(os.toByteArray());
     }
+
+    @Override
+    public void cancelTicketByStation(String stationId) {
+        var p2p = p2PJourneyRepository.findByStartStationIdOrEndStationId(stationId, stationId);
+
+        Map<String, P2PJourney> p2pMap = p2p.stream()
+                .collect(Collectors.toMap(P2PJourney::getId, Function.identity()));
+
+        var orderDetails = orderClient.getOrderByp2pJourneyIds(
+                String.join(",", p2p.stream().map(P2PJourney::getId).toList())
+        );
+
+        Map<String, OrderDetailDto> orderDetailMap = orderDetails.stream()
+                .collect(Collectors.toMap(OrderDetailDto::getId, Function.identity()));
+
+        if (orderDetails.isEmpty()) {
+            log.info("No order details found for station: {}", stationId);
+            return;
+        }
+
+        var tickets = repository.findByTicketOrderDetailIdIn(
+                orderDetails.stream().map(OrderDetailDto::getId).toList()
+        );
+
+        List<VoucherCompensationRequest> compensationRequests = new ArrayList<>();
+
+        tickets.forEach(ticket -> {
+            if (ticket.getStatus() == TicketStatus.VALID) {
+                ticket.setStatus(TicketStatus.CANCELLED);
+                Map<String, Object> ticketData = new HashMap<>();
+                ticketData.put("status", "CANCELLED");
+                database.child(TICKETS_PATH).child(ticket.getId()).updateChildrenAsync(ticketData);
+
+                OrderDetailDto orderDetail = orderDetailMap.get(ticket.getTicketOrderDetailId());
+                if (orderDetail == null) return;
+
+                P2PJourney journey = p2pMap.get(orderDetail.getP2pJourney());
+                if (journey == null) return;
+
+                //customerId = userId?
+                String userId = orderDetail.getCustomerId();
+
+                BigDecimal discountAmount = orderDetail.getFinalTotal() != null
+                        ? orderDetail.getFinalTotal()
+                        : BigDecimal.valueOf(10000);
+
+                Instant validFrom = Instant.now();
+                Instant validUntil = validFrom.plus(30, ChronoUnit.DAYS);
+
+                VoucherCompensationRequest req = VoucherCompensationRequest.builder()
+                        .compensationId(ticket.getId())
+                        .fromStationName(journey.getStartStationId())
+                        .toStationName(journey.getEndStationId())
+                        .userId(userId)
+                        .discountAmount(discountAmount)
+                        .minTransactionAmount(discountAmount) // **** minTransactionAmount = discountAmount
+                        .validFrom(validFrom)
+                        .validUntil(validUntil)
+                        .build();
+
+                compensationRequests.add(req);
+            }
+        });
+
+        if (!compensationRequests.isEmpty()) {
+            voucherClient.createCompensationVoucher(compensationRequests);
+        }
+    }
+
 
     /**
      * Scheduled job to expire tickets whose validUntil is before now and status is
