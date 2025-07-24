@@ -180,23 +180,22 @@ public class OrderServiceImpl implements OrderService {
             order.setStatus(OrderStatus.COMPLETED);
             order = orderRepository.save(order);
             createTicketsForOrder(order);
-        } else {
-            if (checkoutRequest.getVoucherId() != null &&
-                    !checkoutRequest.getVoucherId().isEmpty()
-                    && customerId != null) {
-                final String voucherId = checkoutRequest.getVoucherId();
+        } else if ("PAYOS".equals(checkoutRequest.getPaymentMethod())) {
+            order.setTransactionReference(generateTransactionReference());
+            order = orderRepository.save(order);
+            createPayOSPaymentLink(order);
+            sendOrderEmail(order, EmailType.ORDER_PAYMENT_CONFIRMATION);
+        }
 
-                SecurityUtil.elevate(AccountRole.ADMIN, () -> {
-                    voucherClient.preserve(voucherId, customerId);
-                });
-            }
 
-            if ("PAYOS".equals(checkoutRequest.getPaymentMethod())) {
-                order.setTransactionReference(generateTransactionReference());
-                order = orderRepository.save(order);
-                createPayOSPaymentLink(order);
-                sendOrderEmail(order, EmailType.ORDER_PAYMENT_CONFIRMATION);
-            }
+        if (checkoutRequest.getVoucherId() != null &&
+                !checkoutRequest.getVoucherId().isEmpty()
+                && customerId != null) {
+            final String voucherId = checkoutRequest.getVoucherId();
+
+            SecurityUtil.elevate(AccountRole.ADMIN, () -> {
+                voucherClient.preserve(voucherId, customerId);
+            });
         }
 
         log.info("Created order {} for customer {} with staff {} and final total {}",
