@@ -2,6 +2,7 @@ package com.fpt.metroll.subway.repository;
 
 import com.fpt.metroll.subway.document.Station;
 import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.mongodb.repository.Query;
 
 import java.util.Collection;
 import java.util.List;
@@ -11,4 +12,8 @@ public interface StationRepository extends MongoRepository<Station, String> {
     Optional<Station> findByCode(String code);
 
     List<Station> findByCodeIn(Collection<String> codes);
+
+
+    @Query("{'status': {$ne: 'OPERATIONAL'}}")
+    List<Station> findAllUnavailableStations();
 }
