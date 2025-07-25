@@ -4,6 +4,7 @@ import com.fpt.metroll.subway.document.Station;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.data.mongodb.repository.Query;
 
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -13,7 +14,8 @@ public interface StationRepository extends MongoRepository<Station, String> {
 
     List<Station> findByCodeIn(Collection<String> codes);
 
-
     @Query("{'status': {$ne: 'OPERATIONAL'}}")
     List<Station> findAllUnavailableStations();
+
+    List<Station> findByStatusAndScheduledClosureAtBefore(Station.StationStatus status, Instant scheduledClosureAt);
 }
