@@ -246,8 +246,8 @@ public class TicketValidationServiceImpl implements TicketValidationService {
         if (station == null) {
             throw new IllegalArgumentException("Invalid station ID: " + stationId);
         }
-        if (station.getStatus().equals("CLOSED")) {
-            throw new IllegalArgumentException("Assigned station is closed: " + stationId);
+        if (station.getStatus().equals("CLOSED") || station.getStatus().equals("UNDER_MAINTENANCE")) {
+            throw new IllegalArgumentException("Assigned station is "+ station.getStatus() + ": " + stationId);
         }
     }
 

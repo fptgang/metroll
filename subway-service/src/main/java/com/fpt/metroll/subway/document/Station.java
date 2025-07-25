@@ -33,6 +33,8 @@ public class Station {
     private StationStatus status;
     private String description;
 
+    private Instant scheduledClosureAt; // When the station is scheduled to be closed
+
     @Builder.Default
     private List<LineStationInfo> lineStationInfos = new ArrayList<>();
 
@@ -62,6 +64,6 @@ public class Station {
     }
 
     public enum StationStatus {
-        OPERATIONAL, UNDER_MAINTENANCE, CLOSED
+        OPERATIONAL, UNDER_MAINTENANCE, CLOSED, SCHEDULED_CLOSURE
     }
 }

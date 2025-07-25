@@ -24,6 +24,8 @@ public class StationDto {
     private String description;
     private List<LineStationInfoDto> lineStationInfos;
 
+    private Instant scheduledClosureAt; // When the station is scheduled to be closed
+
     private Instant createdAt;
     private Instant updatedAt;
 
