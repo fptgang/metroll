@@ -99,4 +99,10 @@ public class TicketController {
     public ResponseEntity<String> generateQRCodeBase64(@PathVariable("id") String id) throws Exception {
         return ResponseEntity.ok(ticketService.generateQRCodeBase64(id));
     }
+
+    @Operation(summary = "Check if station has valid tickets with P2P journeys")
+    @GetMapping("/station/{stationId}/has-valid")
+    public ResponseEntity<Boolean> hasValidTicketsForStation(@PathVariable("stationId") String stationId) {
+        return ResponseEntity.ok(ticketService.hasValidTicketsForStation(stationId));
+    }
 }

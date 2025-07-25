@@ -27,8 +27,10 @@ public interface TicketService {
     void updateStatus(String id, TicketStatus status);
 
     TicketDto create(TicketUpsertRequest ticketUpsertRequest);
-    
+
     List<TicketDto> createTickets(List<TicketUpsertRequest> ticketRequests);
 
-    String generateQRCodeBase64(String id) throws Exception ;
+    String generateQRCodeBase64(String id) throws Exception;
+
+    boolean hasValidTicketsForStation(String stationId);
 }
