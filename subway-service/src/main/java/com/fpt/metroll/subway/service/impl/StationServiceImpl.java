@@ -52,7 +52,7 @@ public class StationServiceImpl implements StationService {
 
     @Override
     public PageDto<StationDto> findAll(StationQueryParam queryParam, PageableDto pageable) {
-        var result = mongoHelper.find( query -> buildStationQuery(queryParam), pageable, Station.class)
+        var result = mongoHelper.find(query -> buildStationQuery(queryParam), pageable, Station.class)
                 .map(stationMapper::toDto);
 
         return PageMapper.INSTANCE.toPageDTO(result);
@@ -61,17 +61,67 @@ public class StationServiceImpl implements StationService {
     @Override
     public StationDto save(StationDto stationDto) {
         Station station = stationMapper.toEntity(stationDto);
-        //indicate update station
-        if(station.getId()!=null) {
-            if(stationDto.getStatus().equals("CLOSED")){
-            ticketClient.deactivateP2PJourneyByStation(station.getCode());
+
+        // Indicate update station - validate status change rules
+        if (station.getId() != null) {
+            // Get current station to check existing status
+            Station existingStation = stationRepository.findById(station.getId())
+                    .orElseThrow(() -> new IllegalArgumentException("Station not found"));
+
+            Station.StationStatus currentStatus = existingStation.getStatus();
+            Station.StationStatus newStatus = station.getStatus();
+
+            // Validate status transition rules
+            validateStatusTransition(station.getCode(), currentStatus, newStatus);
+
+            // Deactivate P2P journeys when station is closed
+            if (newStatus == Station.StationStatus.CLOSED) {
+                ticketClient.deactivateP2PJourneyByStation(station.getCode());
             }
         }
-        station = stationRepository.save(station);
 
+        station = stationRepository.save(station);
         log.info("[StationService] Saved station code: {}, station {}", station.getCode(), station);
         return stationMapper.toDto(station);
+    }
 
+    private void validateStatusTransition(String stationCode, Station.StationStatus currentStatus,
+            Station.StationStatus newStatus) {
+        // No validation needed if status hasn't changed
+        if (currentStatus == newStatus) {
+            return;
+        }
+
+        log.info("Validating status transition for station {}: {} -> {}", stationCode, currentStatus, newStatus);
+
+        // Rule 1: operational -> under_maintenance: Always allowed
+        if (currentStatus == Station.StationStatus.OPERATIONAL
+                && newStatus == Station.StationStatus.UNDER_MAINTENANCE) {
+            log.info("Status change from OPERATIONAL to UNDER_MAINTENANCE allowed for station {}", stationCode);
+            return;
+        }
+
+        // Rule 2: closed: Only allowed if no valid tickets exist
+        if (newStatus == Station.StationStatus.CLOSED) {
+            boolean hasValidTickets = ticketClient.hasValidTicketsForStation(stationCode);
+            if (hasValidTickets) {
+                log.warn("Cannot close station {} - valid tickets with P2P journeys still exist", stationCode);
+                throw new IllegalArgumentException(
+                        "Cannot change station status to CLOSED. There are still valid tickets with P2P journeys involving this station.");
+            }
+            log.info("Status change from UNDER_MAINTENANCE to CLOSED allowed for station {} - no valid tickets found",
+                    stationCode);
+            return;
+        }
+
+        // Rule 3: Any lower status -> operational: No validation needed
+        if (newStatus == Station.StationStatus.OPERATIONAL) {
+            log.info("Status change to OPERATIONAL allowed for station {} - no validation required", stationCode);
+            return;
+        }
+
+        // Any other transitions are allowed (no additional restrictions mentioned)
+        log.info("Status change from {} to {} allowed for station {}", currentStatus, newStatus, stationCode);
     }
 
     private Query buildStationQuery(StationQueryParam queryParam) {

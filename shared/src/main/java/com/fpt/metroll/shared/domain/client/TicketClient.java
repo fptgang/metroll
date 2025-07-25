@@ -16,21 +16,25 @@ public interface TicketClient {
 
     @PostMapping("/tickets")
     TicketDto createTicket(TicketUpsertRequest ticketUpsertRequest);
-    
+
     @GetMapping("/p2p-journeys/{id}")
     P2PJourneyDto getP2PJourneyById(@PathVariable("id") String id);
-    
+
     @GetMapping("/timed-ticket-plans/{id}")
     TimedTicketPlanDto getTimedTicketPlanById(@PathVariable("id") String id);
-    
+
     @PostMapping("/tickets/batch")
     List<TicketDto> createTickets(List<TicketUpsertRequest> ticketRequests);
 
     @DeleteMapping("/p2p-journeys/station/{stationId}")
     void deactivateP2PJourneyByStation(@PathVariable("stationId") String stationId);
 
+    @GetMapping("/tickets/station/{stationId}/has-valid")
+    boolean hasValidTicketsForStation(@PathVariable("stationId") String stationId);
+
     /**
-     * Fallback implementation used when ticket-service is unreachable (e.g. local dev)
+     * Fallback implementation used when ticket-service is unreachable (e.g. local
+     * dev)
      */
     class TicketClientFallback implements TicketClient {
 
@@ -74,6 +78,12 @@ public interface TicketClient {
         @Override
         public void deactivateP2PJourneyByStation(String stationId) {
             // do nothing
+        }
+
+        @Override
+        public boolean hasValidTicketsForStation(String stationId) {
+            // In fallback, assume no valid tickets to allow the operation
+            return false;
         }
     }
 

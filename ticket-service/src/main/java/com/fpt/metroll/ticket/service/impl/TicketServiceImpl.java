@@ -53,9 +53,10 @@ public class TicketServiceImpl implements TicketService {
     private final DatabaseReference database;
 
     public TicketServiceImpl(MongoHelper mongoHelper,
-                             TicketMapper mapper,
-                             TicketRepository repository,
-                             FirebaseTicketStatusService firebaseTicketStatusService, OrderClient orderClient, P2PJourneyRepository p2PJourneyRepository) {
+            TicketMapper mapper,
+            TicketRepository repository,
+            FirebaseTicketStatusService firebaseTicketStatusService, OrderClient orderClient,
+            P2PJourneyRepository p2PJourneyRepository) {
         this.mongoHelper = mongoHelper;
         this.database = FirebaseDatabase.getInstance().getReference();
         this.mapper = mapper;
@@ -319,6 +320,47 @@ public class TicketServiceImpl implements TicketService {
         }
         repository.saveAll(toExpire);
         log.info("Expired {} tickets in scheduled job.", toExpire.size());
+    }
+
+    @Override
+    public boolean hasValidTicketsForStation(String stationId) {
+        Preconditions.checkArgument(stationId != null && !stationId.isBlank(),
+                "Station ID cannot be null or blank");
+
+        // Find all valid tickets
+        List<Ticket> validTickets = repository.findByStatusAndTicketType(TicketStatus.VALID, TicketType.P2P);
+
+        for (Ticket ticket : validTickets) {
+            try {
+                // Get order detail for this ticket
+                OrderDetailDto orderDetail = orderClient.getOrderDetail(ticket.getTicketOrderDetailId());
+
+                // Check if this is a P2P ticket and has P2P journey information
+                if (orderDetail.getP2pJourney() != null) {
+                    // Get the P2P journey details
+                    Optional<P2PJourney> p2pJourneyOpt = p2PJourneyRepository.findById(orderDetail.getP2pJourney());
+
+                    if (p2pJourneyOpt.isPresent()) {
+                        P2PJourney p2pJourney = p2pJourneyOpt.get();
+
+                        // Check if this journey involves the specified station
+                        if (stationId.equals(p2pJourney.getStartStationId()) ||
+                                stationId.equals(p2pJourney.getEndStationId())) {
+                            log.info("Found valid ticket {} with P2P journey involving station {}",
+                                    ticket.getId(), stationId);
+                            return true;
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("Error checking ticket {} for station {}: {}",
+                        ticket.getId(), stationId, e.getMessage());
+                // Continue checking other tickets even if one fails
+            }
+        }
+
+        log.info("No valid tickets found involving station {}", stationId);
+        return false;
     }
 
 }
